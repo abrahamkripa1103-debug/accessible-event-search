@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Accessible Event Search</title>
+  <meta name="description" content="WCAG AA-compliant event search that reads from a JSON file and lets users filter by event name and date." />
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #0b0b0c;
+      --muted: #444;
+      --brand: #0b6efd;
+      --brand-contrast: #ffffff;
+      --border: #d0d7de;
+      --focus: #ffbf47; /* GOV.UK-style focus */
+      --card: #f7f8f9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --text: #f3f4f6;
+        --muted: #c1c5cc;
+        --brand: #69a7ff;
+        --brand-contrast: #0b0b0c;
+        --border: #2a2f36;
+        --card: #151922;
+      }
+    }
+    [data-contrast="high"] {
+      --bg: #000;
+      --text: #fff;
+      --muted: #eee;
+      --brand: #ffd500;
+      --brand-contrast: #000;
+      --border: #fff;
+      --card: #111;
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font: 1rem/1.5 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 1rem; }
+    header { padding: 1rem 0 0.5rem; }
+
+    .skip-link {
+      position: absolute; left: -9999px; top: auto;
+    }
+    .skip-link:focus {
+      left: 1rem; top: 1rem; z-index: 1000;
+      background: var(--brand); color: var(--brand-contrast);
+      padding: .5rem .75rem; border-radius: .5rem;
+      outline: 3px solid var(--focus); outline-offset: 2px;
+    }
+
+    h1 { margin: .25rem 0 0; font-size: clamp(1.4rem, 2.5vw, 2rem); }
+    p.lede { margin: .25rem 0 1rem; color: var(--muted); }
+
+    .toolbar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+    .btn {
+      appearance: none; border: 2px solid var(--brand); background: var(--brand); color: var(--brand-contrast);
+      padding: .5rem .75rem; border-radius: .6rem; cursor: pointer; font-weight: 600;
+    }
+    .btn.secondary { background: transparent; color: var(--brand); }
+    .btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+    form {
+      margin: 1rem 0; background: var(--card); border: 1px solid var(--border);
+      border-radius: .75rem; padding: 1rem;
+    }
+    fieldset { border: 0; margin: 0; padding: 0; }
+    legend { font-weight: 700; margin-bottom: .5rem; }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+    @media (min-width: 640px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+    .field { display: grid; gap: .25rem; }
+    label { font-weight: 600; }
+    input[type="text"], input[type="date"] {
+      padding: .6rem .7rem; border: 1px solid var(--border); border-radius: .5rem; background: var(--bg); color: var(--text);
+    }
+    input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+    .assist { font-size: .9rem; color: var(--muted); }
+
+    .results-meta { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-top: .5rem; }
+    .results-count { font-weight: 700; }
+
+    .list { list-style: none; padding: 0; margin: 1rem 0; }
+    .card { border: 1px solid var(--border); border-radius: .75rem; padding: 1rem; background: var(--bg); }
+    .card + .card { margin-top: .75rem; }
+
+    .event-title { font-size: 1.125rem; margin: 0 0 .25rem; }
+    .meta { display: flex; flex-wrap: wrap; gap: .5rem 1rem; color: var(--muted); }
+    .meta dt { font-weight: 600; }
+
+    footer { margin: 2rem 0; font-size: .925rem; color: var(--muted); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+    /* Page Mask overlay */
+    #pageMask {
+      position: fixed;
+      inset: 0;
+      pointer-events: none; /* allow interacting with page under mask */
+      z-index: 9999;
+      display: none; /* toggled via JS */
+      --mask-top: 40vh;
+      --mask-height: 30vh; /* visible band height */
+      --mask-top-stop: calc(var(--mask-top) - var(--mask-height)/2);
+      --mask-bottom-start: calc(var(--mask-top) + var(--mask-height)/2);
+      background: linear-gradient(to bottom,
+        rgba(0,0,0,.45) 0 var(--mask-top-stop),
+        transparent var(--mask-top-stop) var(--mask-bottom-start),
+        rgba(0,0,0,.45) var(--mask-bottom-start) 100%);
+    }
+
+    /* Keyboard help panel */
+    #kbHelp { position: fixed; right: 1rem; bottom: 1rem; max-width: 22rem; background: var(--bg); color: var(--text); border:1px solid var(--border); border-radius:.75rem; box-shadow: 0 8px 24px rgba(0,0,0,.2); padding:.75rem 1rem; z-index:10000; display:none; }
+    #kbHelp h2 { font-size:1rem; margin:.25rem 0 .5rem; }
+    #kbHelp kbd { font-weight:700; border:1px solid var(--border); border-bottom-width:2px; border-radius:.25rem; padding:0 .25rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    /* Mode dropdown */
+    .mode-select { appearance: none; padding:.5rem .75rem; border:1px solid var(--border); border-radius:.5rem; background: var(--bg); color: var(--text); }
+    .mode-select:focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
+
+    /* Mode dropdown */
+    .mode-select { appearance: none; padding:.5rem .75rem; border:1px solid var(--border); border-radius:.5rem; background: var(--bg); color: var(--text); }
+    .mode-select:focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
+
+    /* Enlarge text mode (applies globally via html[data-mode="enlarge"]) */
+    html[data-mode="enlarge"] body { font-size: 1.25rem; line-height: 1.75; }
+    html[data-mode="enlarge"] .event-title { font-size: 1.35rem; }
+
+    /* Text-only reading mode */
+    html[data-mode="text"] body { font-size: 1.2rem; line-height: 1.8; font-family: Georgia, "Times New Roman", serif !important; }
+    html[data-mode="text"] .gov-banner,
+    html[data-mode="text"] nav[aria-label="Primary"],
+    html[data-mode="text"] .help-panel { display: none !important; }
+    html[data-mode="text"] .card, html[data-mode="text"] form { background:#fff !important; border-color:#000 !important; }
+    html[data-mode="text"] * { box-shadow: none !important; }
+    html[data-mode="text"] a { color: #000 !important; text-decoration: underline; }
+  </style>
+</head>
+<body>
+<a class="skip-link" href="#results">Skip to results</a>
+<div id="pageMask" aria-hidden="true"></div>
+<div id="kbHelp" role="dialog" aria-modal="false" aria-labelledby="kbTitle">
+  <button class="btn secondary close" type="button" id="kbClose">Close</button>
+  <h2 id="kbTitle">Keyboard shortcuts</h2>
+  <ul>
+    <li><kbd>/</kbd> focus “Event name”</li>
+    <li><kbd>t</kbd> focus “Event date”</li>
+    <li><kbd>g</kbd> go to results</li>
+    <li><kbd>↑ / ↓</kbd> move between results</li>
+    <li><kbd>m</kbd> toggle Page mask</li>
+    <li><kbd>+</kbd>/<kbd>-</kbd> resize mask (when on)</li>
+    <li><kbd>c</kbd> toggle contrast</li>
+    <li><kbd>l</kbd> Listen (speech)</li>
+    <li><kbd>r</kbd> Reset filters, <kbd>x</kbd> Clear</li>
+    <li><kbd>?</kbd> toggle this help</li>
+    <li><kbd>Esc</kbd> close help / mask</li>
+  </ul>
+</div>
+
+<div class="container" id="app" data-contrast="normal">
+  <header role="banner">
+    <h1>Event Search</h1>
+    <p class="lede">Search by <strong>event name</strong> and <strong>event date</strong>. Data is loaded from <code>work-task-test.json</code>.</p>
+    <div class="toolbar" role="group" aria-label="Display settings">
+      <button class="btn secondary" id="contrastToggle" type="button" aria-pressed="false" hidden>Toggle high contrast</button>
+      <button class="btn secondary" id="maskToggle" type="button" aria-pressed="false" hidden>Page mask</button>
+      <button class="btn secondary" id="listen" type="button" aria-pressed="false">Listen</button>
+      <button class="btn secondary" id="kbMode" type="button" aria-pressed="false" aria-describedby="kbHint" hidden>Keyboard mode</button>
+      <span id="kbHint" class="sr-only">Press ? for shortcuts</span>
+      <label for="modeSelect" class="sr-only">Assistive mode</label>
+      <label for="modeSelect" class="sr-only">Assistive mode</label>
+      <select id="modeSelect" class="mode-select" aria-label="Assistive mode">
+        <option value="normal" selected>Normal</option>
+        <option value="keyboard">Keyboard mode</option>
+        <option value="click-listen">Click to listen</option>
+        <option value="enlarge">Enlarge text</option>
+        <option value="text">Text mode</option>
+        <option value="mask">Page mask</option>
+      </select>
+      <button class="btn secondary" id="reset" type="button">Reset filters</button>
+    </div>
+  </header>
+
+  <main id="main" role="main">
+    <form id="searchForm" role="search" aria-describedby="searchHelp">
+      <fieldset>
+        <legend>Search events</legend>
+        <div class="grid">
+          <div class="field">
+            <label for="q">Event name</label>
+            <input id="q" name="q" type="text" autocomplete="off" inputmode="search" placeholder="e.g. Carers Day Out" />
+            <div id="qHelp" class="assist">Search matches the event title (case-insensitive, partial matches allowed).</div>
+          </div>
+          <div class="field">
+            <label for="date">Event date</label>
+            <input id="date" name="date" type="date" aria-describedby="dateHelp" />
+            <div id="dateHelp" class="assist">Pick a date (YYYY-MM-DD). We match the exact day in the dataset.</div>
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top:.5rem">
+          <button class="btn" type="submit">Search</button>
+          <button class="btn secondary" type="button" id="clear">Clear</button>
+        </div>
+      </fieldset>
+      <p id="searchHelp" class="assist">Use this form to filter events by name and/or a specific date.</p>
+    </form>
+
+    <div class="results-meta" aria-live="polite" aria-atomic="true">
+      <div class="results-count" id="count">Loading events…</div>
+      <div class="assist" id="status" role="status" aria-live="polite"></div>
+    </div>
+
+    <section aria-label="Search results">
+      <ul class="list" id="results"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      Built to meet WCAG 2.2 AA intent: semantic HTML, keyboard-only operation, visible focus, colour contrast controls, descriptive labels/legend, and polite live regions for dynamic content.
+    </p>
+    <noscript><p>JavaScript is required to load and search the events dataset.</p></noscript>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    const el = (id) => document.getElementById(id);
+    const resultsEl = el('results');
+    const countEl = el('count');
+    const statusEl = el('status');
+    const qEl = el('q');
+    const dateEl = el('date');
+    const form = el('searchForm');
+    const clearBtn = el('clear');
+    const resetBtn = el('reset');
+    const contrastBtn = el('contrastToggle');
+    const app = el('app');
+
+    let DATA = [];
+
+    // High contrast toggle (persists for the session)
+    contrastBtn.addEventListener('click', () => {
+      const high = app.getAttribute('data-contrast') === 'high';
+      const next = high ? 'normal' : 'high';
+      app.setAttribute('data-contrast', next);
+      contrastBtn.setAttribute('aria-pressed', String(!high));
+    });
+
+    resetBtn.addEventListener('click', () => {
+      qEl.value = '';
+      dateEl.value = '';
+      render(DATA);
+      qEl.focus();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      qEl.value = '';
+      dateEl.value = '';
+      render(DATA);
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      applyFilters();
+    });
+
+    qEl.addEventListener('input', applyFilters);
+    dateEl.addEventListener('change', applyFilters);
+
+    function applyFilters() {
+      const q = qEl.value.trim().toLowerCase();
+      const picked = dateEl.value; // YYYY-MM-DD
+      const out = DATA.filter((item) => {
+        const nameMatch = !q || (item.event || '').toLowerCase().includes(q);
+        const dateMatch = !picked || isoFromDataset(item.date) === picked;
+        return nameMatch && dateMatch;
+      });
+      render(out);
+    }
+
+    function monthIndex(name) {
+      const m = name.toLowerCase();
+      return [
+        'january','february','march','april','may','june','july','august','september','october','november','december'
+      ].indexOf(m);
+    }
+
+    // Convert dataset date strings like "Friday, 10 October 2016" -> "2016-10-10"
+    function isoFromDataset(s) {
+      if (!s) return '';
+      const trimmed = String(s).trim().replace(/^[A-Za-z]+,\s*/, '');
+      const m = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+      if (!m) return '';
+      const d = parseInt(m[1], 10);
+      const mi = monthIndex(m[2]);
+      const y = parseInt(m[3], 10);
+      if (mi < 0) return '';
+      const dd = String(d).padStart(2, '0');
+      const mm = String(mi + 1).padStart(2, '0');
+      return `${y}-${mm}-${dd}`;
+    }
+
+    function toHumanDate(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      try {
+        return new Intl.DateTimeFormat('en-AU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(dt);
+      } catch {
+        return dt.toDateString();
+      }
+    }
+
+    function render(list) {
+      resultsEl.innerHTML = '';
+      const total = list.length;
+      countEl.textContent = `${total} result${total === 1 ? '' : 's'}`;
+      if (!total) {
+        const li = document.createElement('li');
+        li.className = 'card';
+        li.innerHTML = '<p>No events match your current filters. Try clearing one or more fields.</p>';
+        resultsEl.appendChild(li);
+        return;
+      }
+
+      // Sort by date (ascending), stable by title
+      list.slice().sort((a, b) => {
+        const ai = isoFromDataset(a.date);
+        const bi = isoFromDataset(b.date);
+        if (ai === bi) return (a.event || '').localeCompare(b.event || '');
+        return ai.localeCompare(bi);
+      }).forEach((item) => {
+        const iso = isoFromDataset(item.date);
+        const li = document.createElement('li');
+        li.className = 'card';
+        li.innerHTML = `
+          <article>
+            <h2 class="event-title">${escapeHtml(item.event || 'Untitled event')}</h2>
+            <dl class="meta">
+              <div><dt>Date</dt><dd>${iso ? toHumanDate(iso) : escapeHtml(item.date || '')}</dd></div>
+              <div><dt>Organisation</dt><dd>${escapeHtml(item.organisation || '')}</dd></div>
+              <div><dt>Type</dt><dd>${escapeHtml(item.type || '')}</dd></div>
+              <div><dt>Location</dt><dd>${escapeHtml(item.location || '')}</dd></div>
+              <div><dt>District</dt><dd>${escapeHtml(item.district || '')}</dd></div>
+            </dl>
+          </article>`;
+        resultsEl.appendChild(li);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"]+/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    async function init() {
+      try {
+        const res = await fetch('work-task-test.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        DATA = await res.json();
+        render(DATA);
+        statusEl.textContent = 'Data loaded from work-task-test.json';
+      } catch (err) {
+        // Helpful guidance for local file protocol
+        statusEl.innerHTML = `
+          Could not load <code>work-task-test.json</code>. If opening this page directly from the file system, your browser may block fetch().
+          Try serving the folder with a local web server (e.g. <code>python -m http.server</code>) and open <code>http://localhost:8000/</code>.
+        `;
+        countEl.textContent = '0 results';
+      }
+    }
+
+    init();
+
+    // Ensure focus styles for mouse users only when needed
+    function handleFirstTab(e) {
+      if (e.key === 'Tab') {
+        document.body.classList.add('user-is-tabbing');
+        window.removeEventListener('keydown', handleFirstTab);
+      }
+    }
+    window.addEventListener('keydown', handleFirstTab);
+  })();
+</script>
+<script>
+  (function(){
+    const maskEl = document.getElementById('pageMask');
+    const maskBtn = document.getElementById('maskToggle');
+    const statusEl = document.getElementById('status');
+    if (!maskEl || !maskBtn) return;
+    let enabled = false;
+    let center = 40; // vh
+    let height = 30; // vh
+    function apply(){
+      maskEl.style.setProperty('--mask-top', center + 'vh');
+      maskEl.style.setProperty('--mask-height', height + 'vh');
+    }
+    function setEnabled(on){
+      enabled = on;
+      maskEl.style.display = on ? 'block' : 'none';
+      maskBtn.setAttribute('aria-pressed', String(on));
+      if (statusEl) statusEl.textContent = on ? 'Page mask on. Use ↑/↓ to move, +/- to resize, Esc to exit. Move mouse to reposition.' : 'Page mask off.';
+      if (on) apply();
+    }
+    maskBtn.addEventListener('click', () => setEnabled(!enabled));
+    document.addEventListener('keydown', (e) => {
+      if (!enabled) return;
+      switch (e.key) {
+        case 'ArrowUp': center = Math.max(5, center - 2); apply(); e.preventDefault(); break;
+        case 'ArrowDown': center = Math.min(95, center + 2); apply(); e.preventDefault(); break;
+        case '+': case '=': height = Math.min(90, height + 2); apply(); e.preventDefault(); break;
+        case '-': case '_': height = Math.max(10, height - 2); apply(); e.preventDefault(); break;
+        case 'Escape': setEnabled(false); break;
+      }
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!enabled) return;
+      const vh = (e.clientY / window.innerHeight) * 100;
+      center = Math.max(5, Math.min(95, vh));
+      apply();
+    }, { passive: true });
+  })();
+</script>
+<script>
+  // Robust Listen control using the Web Speech API
+  (function(){
+    const btn = document.getElementById('listen');
+    const statusEl = document.getElementById('status');
+    if (!btn) return;
+    const synth = window.speechSynthesis;
+    let voices = [];
+    function loadVoices(){
+      voices = synth?.getVoices?.() || [];
+      if (voices.length > 0) return Promise.resolve();
+      return new Promise((resolve) => {
+        const t = setInterval(() => {
+          voices = synth.getVoices();
+          if (voices.length) { clearInterval(t); resolve(); }
+        }, 200);
+        setTimeout(() => { clearInterval(t); resolve(); }, 2000);
+      });
+    }
+    function pickVoice(){
+      const prefs = ['en-AU', 'en-GB', 'en-US'];
+      for (const lang of prefs) {
+        const v = voices.find(v => v.lang && v.lang.startsWith(lang));
+        if (v) return v;
+      }
+      return voices[0];
+    }
+    function speak(text){
+      if (!('speechSynthesis' in window)) { alert('Text-to-speech is not supported in this browser.'); return; }
+      if (!text) return;
+      try { synth.cancel(); } catch {}
+      const utter = new SpeechSynthesisUtterance(text);
+      const v = pickVoice();
+      if (v) utter.voice = v;
+      utter.rate = 1; utter.pitch = 1; utter.volume = 1;
+      btn.setAttribute('aria-pressed','true');
+      if (statusEl) statusEl.textContent = 'Reading…';
+      utter.onend = () => { btn.setAttribute('aria-pressed','false'); if (statusEl) statusEl.textContent = 'Done.'; };
+      utter.onerror = (e) => { btn.setAttribute('aria-pressed','false'); if (statusEl) statusEl.textContent = 'Could not speak: ' + (e.error || 'unknown error'); };
+      synth.speak(utter);
+    }
+    function buildSummary(){
+      const heading = (document.querySelector('h1')?.textContent || 'Event Search');
+      const count = (document.getElementById('count')?.textContent || '');
+      const first = (document.querySelector('#results .event-title')?.textContent || '');
+      return [heading, 'Use the form to search by event name and date.', count, first?('First result: ' + first):''].filter(Boolean).join('. ');
+    }
+    // Chrome nudge: resume if paused
+    let nudgeTimer = null;
+    function startNudge(){ if (nudgeTimer) return; nudgeTimer = setInterval(() => { if (synth && synth.paused) synth.resume(); }, 300); }
+    function stopNudge(){ if (!nudgeTimer) return; clearInterval(nudgeTimer); nudgeTimer = null; }
+    window.addEventListener('beforeunload', () => { try { synth.cancel(); } catch {} });
+    btn.addEventListener('click', async () => { await loadVoices(); startNudge(); speak(buildSummary()); setTimeout(stopNudge, 3000); });
+  })();
+</script>
+<script>
+  // Keyboard Mode: shortcuts + roving focus in results
+  (function(){
+    const statusEl = document.getElementById('status');
+    const kbBtn = document.getElementById('kbMode');
+    const help = document.getElementById('kbHelp');
+    const helpClose = document.getElementById('kbClose');
+    const qEl = document.getElementById('q');
+    const dateEl = document.getElementById('date');
+    const resultsEl = document.getElementById('results');
+    const contrastBtn = document.getElementById('contrastToggle');
+    const maskBtn = document.getElementById('maskToggle');
+    const listenBtn = document.getElementById('listen');
+    const resetBtn = document.getElementById('reset');
+    const clearBtn = document.getElementById('clear');
+
+    const kb = { enabled: false, idx: 0 };
+
+    function announce(msg){ if(statusEl) { statusEl.textContent = msg; } }
+    function setKb(on){ kb.enabled = on; if(kbBtn) kbBtn.setAttribute('aria-pressed', String(on)); announce(on ? 'Keyboard mode on. Press ? for shortcuts.' : 'Keyboard mode off.'); }
+    function toggleHelp(){ if(!help) return; const on = help.style.display !== 'block'; help.style.display = on ? 'block' : 'none'; if(on) { help.focus?.(); announce('Keyboard help shown.'); } else { announce('Keyboard help hidden.'); } }
+    function hideHelp(){ if(help && help.style.display === 'block') { help.style.display = 'none'; announce('Keyboard help hidden.'); } }
+
+    // Ensure cards are tabbable and track an index
+    function applyKbToResults(){
+      const cards = Array.from(resultsEl.querySelectorAll('.card'));
+      cards.forEach((el,i)=>{ el.setAttribute('tabindex', i===kb.idx ? '0':'-1'); el.dataset.index = String(i); });
+    }
+    const mo = new MutationObserver(applyKbToResults);
+    mo.observe(resultsEl, { childList: true });
+    applyKbToResults();
+
+    if (kbBtn) kbBtn.addEventListener('click', () => setKb(!kb.enabled));
+    if (helpClose) helpClose.addEventListener('click', hideHelp);
+
+    document.addEventListener('keydown', (e) => {
+      // Always allow ? to toggle help
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) { toggleHelp(); e.preventDefault(); return; }
+      if (!kb.enabled) return;
+      // Ignore when typing in inputs/textareas or with modifiers
+      const t = e.target; const tag = (t && t.tagName || '').toLowerCase();
+      const typing = tag === 'input' || tag === 'textarea' || (t && t.isContentEditable);
+      if (typing) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      switch (e.key) {
+        case '/': qEl?.focus(); e.preventDefault(); break;
+        case 't': dateEl?.focus(); e.preventDefault(); break;
+        case 'g': {
+          const first = resultsEl.querySelector('.card');
+          if (first) { kb.idx = 0; applyKbToResults(); first.focus(); first.scrollIntoView({block:'center'}); }
+          e.preventDefault();
+          break;
+        }
+        case 'm': maskBtn?.click(); e.preventDefault(); break;
+        case 'l': listenBtn?.click(); e.preventDefault(); break;
+        case 'c': contrastBtn?.click(); e.preventDefault(); break;
+        case 'r': resetBtn?.click(); e.preventDefault(); break;
+        case 'x': clearBtn?.click(); e.preventDefault(); break;
+        case 'Escape': hideHelp(); break;
+        case 'ArrowDown':
+        case 'j': {
+          const cards = Array.from(resultsEl.querySelectorAll('.card'));
+          if (!cards.length) return;
+          kb.idx = Math.min(cards.length - 1, kb.idx + 1);
+          applyKbToResults(); cards[kb.idx].focus(); cards[kb.idx].scrollIntoView({block:'nearest'}); e.preventDefault();
+          break;
+        }
+        case 'ArrowUp':
+        case 'k': {
+          const cards = Array.from(resultsEl.querySelectorAll('.card'));
+          if (!cards.length) return;
+          kb.idx = Math.max(0, kb.idx - 1);
+          applyKbToResults(); cards[kb.idx].focus(); cards[kb.idx].scrollIntoView({block:'nearest'}); e.preventDefault();
+          break;
+        }
+      }
+    });
+  })();
+</script>
+<script>
+  // Mode dropdown controller (Normal / Keyboard / Click-to-listen / Enlarge / Text / Mask)
+  (function(){
+    const sel = document.getElementById('modeSelect');
+    const docEl = document.documentElement;
+    const contrastBtn = document.getElementById('contrastToggle');
+    const maskBtn = document.getElementById('maskToggle');
+    const kbBtn = document.getElementById('kbMode');
+    const statusEl = document.getElementById('status');
+    const resultsEl = document.getElementById('results');
+    const listenBtn = document.getElementById('listen');
+
+    let clickListen = false;
+
+    function ensure(btn, wantOn){
+      if (!btn) return;
+      const isOn = btn.getAttribute('aria-pressed') === 'true';
+      if (wantOn !== undefined && wantOn !== isOn) btn.click();
+    }
+    function speakText(text){
+      const synth = window.speechSynthesis; if (!('speechSynthesis' in window)) { alert('Text-to-speech not supported in this browser.'); return; }
+      try { synth.cancel(); } catch {}
+      const u = new SpeechSynthesisUtterance(String(text||''));
+      synth.speak(u);
+    }
+    function buildCardSpeech(card){
+      const title = card.querySelector('.event-title')?.textContent || 'Event';
+      const bits = [title];
+      card.querySelectorAll('dl.meta > div').forEach(div => {
+        const k = div.querySelector('dt')?.textContent?.trim();
+        const v = div.querySelector('dd')?.textContent?.trim();
+        if (k && v) bits.push(`${k}: ${v}`);
+      });
+      return bits.join('. ');
+    }
+    function onResultsClick(e){ if (!clickListen) return; const card = e.target.closest('.card'); if (card) speakText(buildCardSpeech(card)); }
+    function onResultsKey(e){ if (!clickListen) return; if (e.key==='Enter' || e.key===' ') { const card=e.target.closest('.card'); if(card){ speakText(buildCardSpeech(card)); e.preventDefault(); } } }
+    resultsEl?.addEventListener('click', onResultsClick);
+    resultsEl?.addEventListener('keydown', onResultsKey);
+
+    function clearDocMode(){ docEl.removeAttribute('data-mode'); }
+
+    function activate(mode){
+      switch(mode){
+        case 'keyboard':
+          clickListen = false; clearDocMode(); ensure(maskBtn, false); ensure(kbBtn, true); if (statusEl) statusEl.textContent = 'Keyboard mode selected.'; break;
+        case 'click-listen':
+          clickListen = true; clearDocMode(); ensure(kbBtn, false); ensure(maskBtn, false); if (statusEl) statusEl.textContent = 'Click-to-listen enabled. Click a result card (or press Enter) to hear details.'; break;
+        case 'enlarge':
+          clickListen = false; docEl.setAttribute('data-mode','enlarge'); ensure(kbBtn, false); ensure(maskBtn, false); if (statusEl) statusEl.textContent = 'Enlarge text mode selected.'; break;
+        case 'text':
+          clickListen = false; docEl.setAttribute('data-mode','text'); ensure(kbBtn, false); ensure(maskBtn, false); if (statusEl) statusEl.textContent = 'Text-only mode selected.'; break;
+        case 'mask':
+          clickListen = false; clearDocMode(); ensure(kbBtn, false); ensure(maskBtn, true); if (statusEl) statusEl.textContent = 'Page mask selected.'; break;
+        default:
+          clickListen = false; clearDocMode(); ensure(kbBtn, false); ensure(maskBtn, false); if (statusEl) statusEl.textContent = 'Normal mode selected.'; break;
+      }
+    }
+    if (sel) sel.addEventListener('change', () => activate(sel.value));
+    document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') { try { window.speechSynthesis?.cancel(); } catch{} } });
+  })();
+</script>
+</body>
+</html>
