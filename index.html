@@ -3,342 +3,508 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Accessible Event Search</title>
-  <meta name="description" content="WCAG-friendly event search with assistive modes: keyboard, click-to-listen, enlarge text, text popup, page mask, form reading.">
+  <title>Accessible Event Search (Embedded, Fixed)</title>
   <style>
-    :root {
-      --bg: #ffffff; --text: #0b0b0c; --muted: #444; --border: #d0d7de; --card: #f7f8f9;
-      --focus: #ffbf47; --link: #0a5bd3; --link-visited: #5a3db1;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root { --bg:#0f1115; --text:#f3f4f6; --muted:#c1c5cc; --border:#2a2f36; --card:#151922; --link:#8bb3ff; --link-visited:#c7a8ff; }
-    }
-    html, body { height: 100%; }
-    body { margin: 0; background: var(--bg); color: var(--text);
-      font: 1rem/1.5 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans"; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 1rem; }
-    header { padding: .75rem 0; border-bottom: 1px solid var(--border); }
-    h1 { margin: 0 0 .25rem; font-size: clamp(1.4rem, 2.5vw, 2rem); }
-    .lede { color: var(--muted); margin: 0 0 .75rem; }
-
-    .toolbar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
-    .btn { appearance: none; border: 2px solid var(--link); background: var(--link); color: #fff; padding: .5rem .75rem; border-radius: .6rem; cursor: pointer; font-weight: 600; }
-    .btn.secondary { background: transparent; color: var(--link); }
-    .btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-
-    form { margin: 1rem 0; background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: 1rem; }
-    legend { font-weight: 700; margin-bottom: .5rem; }
-    .grid { display: grid; grid-template-columns: 1fr; gap: .75rem; }
-    @media (min-width: 640px) { .grid { grid-template-columns: 1fr 1fr; } }
-    .field { display: grid; gap: .25rem; }
-    label { font-weight: 600; }
-    input[type="text"], input[type="date"] { padding: .6rem .7rem; border: 1px solid var(--border); border-radius: .5rem; background: var(--bg); color: var(--text); }
-    input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-
-    .results-meta { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-top: .5rem; }
-    .results-count { font-weight: 700; }
-    .list { list-style: none; padding: 0; margin: 1rem 0; }
-    .card { border: 1px solid var(--border); border-radius: .75rem; padding: 1rem; background: var(--bg); }
-    .card + .card { margin-top: .75rem; }
-    .event-title { font-size: 1.125rem; margin: 0 0 .25rem; }
-    .meta { display: flex; flex-wrap: wrap; gap: .5rem 1rem; color: var(--muted); }
-    .meta dt { font-weight: 700; }
-
-    footer { margin: 2rem 0; font-size: .925rem; color: var(--muted); }
-
-    .mode-select { appearance: none; padding:.5rem .75rem; border:1px solid var(--border); border-radius:.5rem; background: var(--bg); color: var(--text); }
-    .mode-select:focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
-
-    html[data-mode="enlarge"] body { font-size: 1.25rem; line-height: 1.75; }
-    html[data-mode="enlarge"] .event-title { font-size: 1.35rem; }
-
-    #pageMask { position: fixed; inset: 0; pointer-events: none; z-index: 9999; display: none;
-      --mask-top: 40vh; --mask-height: 30vh;
-      --mask-top-stop: calc(var(--mask-top) - var(--mask-height)/2);
-      --mask-bottom-start: calc(var(--mask-top) + var(--mask-height)/2);
-      background: linear-gradient(to bottom, rgba(0,0,0,.45) 0 var(--mask-top-stop), transparent var(--mask-top-stop) var(--mask-bottom-start), rgba(0,0,0,.45) var(--mask-bottom-start) 100%); }
-
-    /* TTS mini controller */
-    #ttsBar{position:fixed; left:.5rem; top:.5rem; z-index:10001; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:.5rem; box-shadow:0 6px 20px rgba(0,0,0,.25); display:flex; align-items:center; gap:.25rem; padding:.25rem;}
-    #ttsBar[hidden]{display:none;}
-    .tts-btn{appearance:none; border:1px solid var(--border); background:var(--card); color:inherit; padding:.35rem .5rem; border-radius:.35rem; font-weight:700; cursor:pointer;}
-    .tts-btn:focus-visible{outline:3px solid var(--focus); outline-offset:2px;}
-    .tts-group{display:flex; align-items:center; gap:.25rem;}
-    .tts-range{width:120px; height:2rem;}
-
-    /* Text mode popup */
-    #textModal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55); z-index:10002;}
-    #textModal[aria-hidden="false"]{display:flex;}
-    .text-dialog{background:var(--bg); color:var(--text); width:min(92vw, 900px); max-height:86vh; border:1px solid var(--border); border-radius:.75rem; box-shadow:0 10px 30px rgba(0,0,0,.35); display:flex; flex-direction:column;}
-    .text-toolbar{display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem; border-bottom:1px solid var(--border);}
-    .text-toolbar h2{margin:0; font-size:1rem;}
-    .text-toolbar .grow{flex:1;}
-    .text-content{padding:1rem; overflow:auto; font-size:var(--tm-fs,1.125rem); line-height:1.65;}
-    .text-content h3{margin:.75rem 0 .25rem;}
-    .sr-only{position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
+    :root { --bg:#fff; --text:#0b0b0c; --muted:#545862; --border:#d0d7de; --card:#f7f8f9; --focus:#ffbf47; --link:#0a5bd3; --shadow:0 10px 30px rgba(0,0,0,.25); }
+    @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --text:#f3f4f6; --muted:#c1c5cc; --border:#2a2f36; --card:#151922; --link:#8bb3ff; --shadow:0 14px 36px rgba(0,0,0,.5); } }
+    html,body{height:100%} body{margin:0;background:var(--bg);color:var(--text);font:1rem/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans"}
+    .container{max-width:1100px;margin:0 auto;padding:1rem}
+    header{padding:.75rem 0;border-bottom:1px solid var(--border)}
+    h1{margin:0 0 .25rem;font-size:clamp(1.4rem,2.5vw,2rem)} .lede{color:var(--muted);margin:0 0 .75rem}
+    .toolbar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+    .btn{appearance:none;border:2px solid var(--link);background:var(--link);color:#fff;padding:.5rem .75rem;border-radius:.6rem;cursor:pointer;font-weight:700}
+    .btn.secondary{background:transparent;color:var(--link)} .btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    /* segmented listen buttons */
+    .btn.segment-left{border-top-right-radius:0;border-bottom-right-radius:0;}
+    .btn.segment-mid{border-radius:0;border-left-width:0;border-right-width:0;}
+    .btn.segment-right{border-top-left-radius:0;border-bottom-left-radius:0;border-left-width:0;}
+    .btn.play{background:#2a8a2a;border-color:#2a8a2a;color:#fff;}
+    .btn.play:hover{filter:brightness(.95);}
+    /* Listen dropdown with toggles */
+    .listen-wrap{position:fixed; right:.5rem; top:.5rem; z-index:10005; display:inline-flex; align-items:center; gap:.25rem;}
+    .btn.split{border-top-right-radius:0;border-bottom-right-radius:0}
+    .btn.icon{border-top-left-radius:0;border-bottom-left-radius:0;padding:.5rem .6rem}
+    .listen-menu{position:absolute; right:0; left:auto; top:calc(100% + 6px); bottom:auto; min-width:280px; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:.5rem; box-shadow:var(--shadow); padding:.25rem 0; z-index:10006; display:none; max-height:min(70vh, 480px); overflow:auto;}
+    .listen-menu[aria-hidden="false"]{display:block;}
+    .menu-item{display:flex; align-items:center; gap:.6rem; width:100%; padding:.55rem .75rem; background:none; border:0; cursor:pointer; text-align:left; font-weight:600;}
+    .menu-item:hover,.menu-item:focus-visible{background:var(--card); outline:3px solid var(--focus); outline-offset:-3px;}
+    .menu-label{flex:1;} .menu-small{font-weight:500; font-size:.92rem; color:var(--muted);}
+    .menu-sep{height:1px; background:var(--border); margin:.25rem 0;}
+    /* Switch control */
+    .switch{position:relative; width:44px; height:24px; border-radius:999px; border:1px solid var(--border); background:#c9cdd3; display:inline-block;}
+    .switch .knob{position:absolute; top:1px; left:1px; width:20px; height:20px; border-radius:999px; background:#fff; transition:transform .15s ease;}
+    .switch[aria-checked="true"]{background:#1f883d;} .switch[aria-checked="true"] .knob{transform:translateX(20px);}
+    .switch:focus-visible{outline:3px solid var(--focus); outline-offset:2px;}
+    form{margin:1rem 0;background:var(--card);border:1px solid var(--border);border-radius:.75rem;padding:1rem}
+    legend{font-weight:700;margin-bottom:.5rem} .grid{display:grid;grid-template-columns:1fr;gap:.75rem} @media (min-width:640px){.grid{grid-template-columns:1fr 1fr}}
+    .field{display:grid;gap:.25rem} label{font-weight:600} input[type="text"],input[type="date"]{padding:.6rem .7rem;border:1px solid var(--border);border-radius:.5rem;background:var(--bg);color:var(--text)}
+    input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    .results-meta{display:flex;justify-content:space-between;align-items:center;gap:.75rem;margin-top:.5rem} .results-count{font-weight:700}
+    .list{list-style:none;padding:0;margin:1rem 0} .card{border:1px solid var(--border);border-radius:.75rem;padding:1rem;background:var(--bg)} .card+.card{margin-top:.75rem}
+    .event-title{font-size:1.125rem;margin:0 0 .25rem} .meta{display:flex;flex-wrap:wrap;gap:.5rem 1rem;color:var(--muted)} .meta dt{font-weight:700}
+    html[data-mode="enlarge"] body{font-size:1.25rem;line-height:1.75} html[data-mode="enlarge"] .event-title{font-size:1.35rem}
+    #pageMask{position:fixed;inset:0;pointer-events:none;z-index:9999;display:none;--mask-top:40vh;--mask-height:30vh;--mask-top-stop:calc(var(--mask-top) - var(--mask-height)/2);
+      --mask-bottom-start:calc(var(--mask-top) + var(--mask-height)/2);background:linear-gradient(to bottom,rgba(0,0,0,.45) 0 var(--mask-top-stop),transparent var(--mask-top-stop) var(--mask-bottom-start),rgba(0,0,0,.45) var(--mask-bottom-start) 100%)}
+    #ttsBar{position:fixed;right:.5rem;top:4.2rem;z-index:10001;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:.5rem;box-shadow:var(--shadow);display:flex;align-items:center;gap:.25rem;padding:.25rem}
+    #ttsBar[hidden]{display:none} .tts-btn{appearance:none;border:1px solid var(--border);background:var(--card);color:inherit;padding:.35rem .5rem;border-radius:.35rem;font-weight:700;cursor:pointer}
+    .tts-btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px} .tts-group{display:flex;align-items:center;gap:.25rem} .tts-range{width:120px;height:2rem}
+    #textModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:10002}
+    #textModal[aria-hidden="false"]{display:flex} .text-dialog{background:var(--bg);color:var(--text);width:min(92vw,900px);max-height:86vh;border:1px solid var(--border);border-radius:.75rem;box-shadow:var(--shadow);display:flex;flex-direction:column}
+    .text-toolbar{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;border-bottom:1px solid var(--border)} .text-toolbar h2{margin:0;font-size:1rem} .text-toolbar .grow{flex:1}
+    .text-content{padding:1rem;overflow:auto;font-size:var(--tm-fs,1.125rem);line-height:1.65} .text-content h3{margin:.75rem 0 .25rem}
+    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   </style>
 </head>
 <body>
-  <div class="container" id="app">
-    <header role="banner">
-      <h1>Event Search</h1>
-      <p class="lede">Search by <strong>event name</strong> and <strong>event date</strong>. </p>
-      <div class="toolbar" role="group" aria-label="Assistive controls">
-        <select id="modeSelect" class="mode-select" aria-label="Assistive mode">
-          <option value="normal" selected>Normal</option>
-          <option value="keyboard">Keyboard mode</option>
-          <option value="click-listen">Click to listen</option>
-          <option value="enlarge">Enlarge text</option>
-          <option value="text">Text mode</option>
-          <option value="mask">Page mask</option>
-          <option value="form-read">Form reading</option>
-        </select>
-        <button class="btn secondary" id="listen" type="button" aria-label="Listen to page summary">Listen</button>
-      </div>
-    </header>
+<!-- Embedded data so no fetch is needed -->
+<script id="embeddedData" type="application/json">[
+  {
+    "organisation":"Test Centre 1",
+    "type":"Carers of people living with dementia",
+    "event":"Wellness and Pamper Day for Older Carers",
+    "date":"Monday, 1 October 2016",
+    "location":"Gosford",
+    "district":"Central Coast"
+  },
+  {
+    "organisation":"Test Centre 2",
+    "type":"All carers",
+    "event":"Carers Pamper Day",
+    "date":"Friday, 10 October 2016",
+    "location":"Baulkham Hills",
+    "district":"Cumberland/Prospect"
+  },
+  {
+    "organisation":"Test Centre 3",
+    "type":"Carers of younger people (under 65 years of age) with a disability",
+    "event":"Side by Side Carers Luncheon",
+    "date":"Saturday, 30 October 2016",
+    "location":"Pottsville ",
+    "district":"Far north coast"
+  },
+  {
+    "organisation":"Test Centre 4",
+    "type":"Carers of people with a mental illness",
+    "event":"Carers Forum",
+    "date":"Sunday, 16 October 2016",
+    "location":"Yamba",
+    "district":"Far north coast"
+  },
+  {
+    "organisation":"Test Centre 5",
+    "type":"All carers",
+    "event":"Carer Connections Movie Day",
+    "date":"Thursday, 20 October 2016",
+    "location":"Glendale",
+    "district":"Hunter"
+  },
+  {
+    "organisation":"Test Centre 5",
+    "type":"Carers of people with a chronic illness",
+    "event":"Parkinson's Carers Coffee & Cake Break",
+    "date":"Thursday, 20 October 2016",
+    "location":"Newcastle ",
+    "district":"Hunter"
+  },
+  {
+    "organisation":"Test Centre 6",
+    "type":"All carers",
+    "event":"CRCC National Carers Week Tour & Lunch ",
+    "date":"Thursday, 20 October 2016",
+    "location":"Newcastle ",
+    "district":"Hunter"
+  },
+  {
+    "organisation":"Test Centre 7",
+    "type":"Carers of younger people (under 65 years of age) with a disability",
+    "event":"Group Outing",
+    "date":"Sunday, 2 October 2016",
+    "location":"Kiama",
+    "district":"Illawara"
+  },
+  {
+    "organisation":"Test Centre 8",
+    "type":"Carers of people with a mental illness",
+    "event":"Luscious Lunch",
+    "date":"Monday, 17 October 2016",
+    "location":"Wollongong",
+    "district":"Illawara"
+  },
+  {
+    "organisation":"Test Centre 9",
+    "type":"Carers of frail-aged people",
+    "event":"Polish Carers Get Together",
+    "date":"Monday, 17 October 2016",
+    "location":"Ashfield",
+    "district":"Inner West sydney"
+  },
+  {
+    "organisation":"Test Centre 10",
+    "type":"All carers",
+    "event":"Carers Day Out 2016",
+    "date":"Tuesday, 18 October 2016",
+    "location":"Harbour",
+    "district":"Mid North Coast"
+  },
+  {
+    "organisation":"Test Centre 11",
+    "type":"Carers of people living with dementia",
+    "event":"National Carers Week Morning Tea",
+    "date":"Tuesday, 18 October 2016",
+    "location":"Harbour",
+    "district":"Mid North Coast"
+  },
+  {
+    "organisation":"Test Centre 12",
+    "type":"Carers of people living with dementia",
+    "event":"Carers Luncheon",
+    "date":"Wednesday, 19 October 2016",
+    "location":"Haven",
+    "district":"Mid North Coast"
+  },
+  {
+    "organisation":"Test Centre 13",
+    "type":"Carers of people living with dementia",
+    "event":"Carers Support Group Morning Tea",
+    "date":"Monday, 24 October 2016",
+    "location":"Richmond",
+    "district":"Nepean"
+  },
+  {
+    "organisation":"Test Centre 14",
+    "type":"All carers",
+    "event":"Pamper Session & Morning Tea",
+    "date":"Friday, 4 November 2016",
+    "location":"Katoomba",
+    "district":"Nepean"
+  },
+  {
+    "organisation":"Test Centre 15",
+    "type":"Carers of people with a mental illness",
+    "event":"Growing in our Group",
+    "date":"Tuesday, 25 October 2016",
+    "location":"Tenterfield",
+    "district":"New England"
+  },
+  {
+    "organisation":"Test Centre 16",
+    "type":"All carers",
+    "event":"Carers Come Together",
+    "date":"Wednesday, 26 October 2016",
+    "location":"Barraba",
+    "district":"New England"
+  },
+  {
+    "organisation":"Test Centre 17",
+    "type":"Carers of frail-aged people",
+    "event":"Happy Photography Day",
+    "date":"Wednesday, 12 October 2016",
+    "location":"Eastwood",
+    "district":"Northern Sydney"
+  },
+  {
+    "organisation":"Test Centre 18",
+    "type":"Carers of younger people with a disability",
+    "event":"Dining & Relaxation Evening",
+    "date":"Wednesday, 12 October 2016",
+    "location":"Epping",
+    "district":"Northern Sydney"
+  },
+  {
+    "organisation":"Test Centre 19",
+    "type":"Carers of younger people with a disability",
+    "event":"Keeping the Connection Going",
+    "date":"Saturday, 1 October 2016",
+    "location":"Albury",
+    "district":"Riverina/Murray"
+  },
+  {
+    "organisation":"Test Centre 20",
+    "type":"Carers of frail-aged people",
+    "event":"Griffith Festival of Gardens",
+    "date":"Friday, 14 October 2016",
+    "location":"Griffith",
+    "district":"Riverina/Murray"
+  },
+  {
+    "organisation":"Test Centre 21",
+    "type":"All carers",
+    "event":"Educational Lunch ",
+    "date":"Monday, 21 November 2016",
+    "location":"Miranda",
+    "district":"South East Sydney"
+  },
+  {
+    "organisation":"Test Centre 22",
+    "type":"Carers of younger people (under 65 years of age) with a disability",
+    "event":"Lunch & Art Based Mindfulness Exercise",
+    "date":"Wednesday, 19 October 2016",
+    "location":"Moss Vale",
+    "district":"Southern Highlands"
+  },
+  {
+    "organisation":"Test Centre 23",
+    "type":"Carers of younger people (under 65 years of age) with a disability",
+    "event":"Carers High Tea",
+    "date":"Thursday, 20 October 2016",
+    "location":"Moss Vale",
+    "district":"Southern Highlands"
+  },
+  {
+    "organisation":"Test Centre 24",
+    "type":"Carers of younger people with a disability",
+    "event":"Carers Cuppa",
+    "date":"Saturday, 22 October 2016",
+    "location":"Hill Top",
+    "district":"Southern Highlands"
+  },
+  {
+    "organisation":"Test Centre 25",
+    "type":"Carers of people living with dementia",
+    "event":"Morning Tea",
+    "date":"Tuesday, 25 October 2016",
+    "location":"Merimbula",
+    "district":"Southern Highlands"
+  }
+]</script>
 
-    <main id="main" role="main">
-      <form id="searchForm" role="search" aria-describedby="searchHelp">
-        <fieldset>
-          <legend>Search events</legend>
-          <div class="grid">
-            <div class="field">
-              <label for="q">Event name</label>
-              <input id="q" name="q" type="text" autocomplete="off" placeholder="e.g. Carers Day Out" aria-describedby="qHelp" />
-              <div id="qHelp" class="assist">Search matches the event title (case-insensitive, partial matches allowed).</div>
-            </div>
-            <div class="field">
-              <label for="date">Event date</label>
-              <input id="date" name="date" type="date" aria-describedby="dateHelp" />
-              <div id="dateHelp" class="assist">Pick a date (YYYY-MM-DD). We match the exact day in the dataset.</div>
-            </div>
+<div class="container">
+  <header role="banner">
+    <h1>Event Search</h1>
+    <p class="lede">Search by <strong>event name</strong> and <strong>event date</strong>.</p>
+
+    <div class="toolbar" role="group" aria-label="Assistive controls">
+      <div class="listen-wrap">
+        <button id="listenMenuBtn" class="btn secondary segment-left" aria-haspopup="true" aria-expanded="false" aria-controls="listenMenu" aria-label="Open menu">☰</button>
+        <button id="listenMainBtn" class="btn secondary segment-mid" aria-label="Listen">🔈 Listen</button>
+        <button id="listenPlayBtn" class="btn play segment-right" aria-label="Play">▶</button>
+
+        <div id="listenMenu" class="listen-menu" role="menu" aria-hidden="true">
+          <button class="menu-item" id="miSettings" role="menuitem"><span class="menu-label">Settings</span></button>
+          <div class="menu-sep" aria-hidden="true"></div>
+
+          <div class="menu-item" role="menuitem">
+            <span class="menu-label">Keyboard Mode</span>
+            <span id="swKb" class="switch" role="switch" aria-checked="false" tabindex="0"><span class="knob"></span></span>
           </div>
-          <div class="toolbar" style="margin-top:.5rem">
-            <button class="btn" type="submit">Search</button>
-            <button class="btn secondary" type="button" id="clear">Clear</button>
+          <div class="menu-item" role="menuitem">
+            <span class="menu-label">Click and Listen</span>
+            <span id="swListen" class="switch" role="switch" aria-checked="false" tabindex="0"><span class="knob"></span></span>
           </div>
-        </fieldset>
-        <p id="searchHelp" class="assist">Use this form to filter events by name and/or a specific date.</p>
-      </form>
+          <div class="menu-item" role="menuitem">
+            <span class="menu-label">Enlarge Text</span>
+            <span id="swEnlarge" class="switch" role="switch" aria-checked="false" tabindex="0"><span class="knob"></span></span>
+          </div>
+          <div class="menu-item" role="menuitem">
+            <span class="menu-label">Form Reading</span>
+            <span id="swForm" class="switch" role="switch" aria-checked="false" tabindex="0"><span class="knob"></span></span>
+          </div>
 
-      <div class="results-meta" aria-live="polite" aria-atomic="true">
-        <div class="results-count" id="count">Loading events…</div>
-        <div class="assist" id="status" role="status" aria-live="polite"></div>
+          <div class="menu-sep" aria-hidden="true"></div>
+          <button class="menu-item" id="miText" role="menuitem"><span class="menu-label">Text Mode</span></button>
+          <button class="menu-item" id="miMask" role="menuitem"><span class="menu-label">Page Mask</span> <span class="menu-small">(↑/↓ move, +/- size)</span></button>
+        </div>
       </div>
-
-      <section aria-label="Search results">
-        <ul class="list" id="results"></ul>
-      </section>
-    </main>
-
-    <footer>
-      <p>WCAG intent: keyboard operation, visible focus, skip verbosity; modes: keyboard, click-to-listen, enlarge, text popup, page mask, form reading.</p>
-    </footer>
-  </div>
-
-  <!-- TTS toolbar -->
-  <div id="ttsBar" role="region" aria-label="Listen controls" hidden>
-    <button id="ttsPlay" class="tts-btn" aria-label="Play/Pause">▶</button>
-    <button id="ttsStop" class="tts-btn" aria-label="Stop">■</button>
-    <button id="ttsPrev" class="tts-btn" aria-label="Previous">⏮</button>
-    <button id="ttsNext" class="tts-btn" aria-label="Next">⏭</button>
-    <div class="tts-group">
-      <button id="ttsVolBtn" class="tts-btn" aria-controls="ttsVol" aria-expanded="false" aria-label="Volume">🔊</button>
-      <input id="ttsVol" class="tts-range" type="range" min="0" max="1" step="0.1" value="1" hidden>
     </div>
-    <div class="tts-group">
-      <button id="ttsRateBtn" class="tts-btn" aria-controls="ttsRate" aria-expanded="false" aria-label="Speech rate">⏱</button>
-      <input id="ttsRate" class="tts-range" type="range" min="0.5" max="1.6" step="0.1" value="1" hidden>
+  </header>
+
+  <main id="main" role="main">
+    <form id="searchForm" role="search" aria-describedby="searchHelp">
+      <fieldset>
+        <legend>Search events</legend>
+        <div class="grid">
+          <div class="field">
+            <label for="q">Event name</label>
+            <input id="q" name="q" type="text" autocomplete="off" placeholder="e.g. Carers Day Out" aria-describedby="qHelp" />
+            <div id="qHelp" class="assist">Search matches the event title.</div>
+          </div>
+          <div class="field">
+            <label for="date">Event date</label>
+            <input id="date" name="date" type="date" aria-describedby="dateHelp" />
+            <div id="dateHelp" class="assist">Pick a date (YYYY-MM-DD).</div>
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top:.5rem">
+          <button class="btn" type="submit">Search</button>
+          <button class="btn secondary" type="button" id="clear">Clear</button>
+        </div>
+      </fieldset>
+      <p id="searchHelp" class="assist">Use this form to filter events by name and/or a specific date.</p>
+    </form>
+
+    <div class="results-meta" aria-live="polite" aria-atomic="true">
+      <div class="results-count" id="count">Loading events…</div>
+      <div class="assist" id="status" role="status" aria-live="polite"></div>
     </div>
-    <button id="ttsClose" class="tts-btn" aria-label="Close">✕</button>
-  </div>
 
-  <!-- Text Mode Popup -->
-  <div id="textModal" role="dialog" aria-modal="true" aria-labelledby="textTitle" aria-hidden="true">
-    <div class="text-dialog">
-      <div class="text-toolbar">
-        <h2 id="textTitle">Text mode</h2>
-        <div class="grow"></div>
-        <button id="textMinus" class="tts-btn" aria-label="Decrease text size">A−</button>
-        <button id="textPlus" class="tts-btn" aria-label="Increase text size">A+</button>
-        <button id="textClose" class="tts-btn" aria-label="Close text mode">✕</button>
-      </div>
-      <div id="textModalContent" class="text-content" tabindex="0" aria-describedby="textHelp"></div>
-      <p id="textHelp" class="sr-only">Text mode shows a simplified reading view. Press Escape to close.</p>
+    <section aria-label="Search results">
+      <ul class="list" id="results"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>Menu includes: Keyboard, Click-to-listen, Enlarge text, Form reading, Text mode, and Page mask.</p>
+  </footer>
+</div>
+
+<div id="ttsBar" role="region" aria-label="Listen controls" hidden>
+  <button id="ttsPlay" class="tts-btn" aria-label="Play/Pause">▶</button>
+  <button id="ttsStop" class="tts-btn" aria-label="Stop">■</button>
+  <button id="ttsPrev" class="tts-btn" aria-label="Previous">⏮</button>
+  <button id="ttsNext" class="tts-btn" aria-label="Next">⏭</button>
+  <div class="tts-group">
+    <button id="ttsVolBtn" class="tts-btn" aria-controls="ttsVol" aria-expanded="false" aria-label="Volume">🔊</button>
+    <input id="ttsVol" class="tts-range" type="range" min="0" max="1" step="0.1" value="1" hidden>
+  </div>
+  <div class="tts-group">
+    <button id="ttsRateBtn" class="tts-btn" aria-controls="ttsRate" aria-expanded="false" aria-label="Speech rate">⏱</button>
+    <input id="ttsRate" class="tts-range" type="range" min="0.5" max="1.6" step="0.1" value="1" hidden>
+  </div>
+  <button id="ttsClose" class="tts-btn" aria-label="Close">✕</button>
+</div>
+
+<div id="textModal" role="dialog" aria-modal="true" aria-labelledby="textTitle" aria-hidden="true">
+  <div class="text-dialog">
+    <div class="text-toolbar">
+      <h2 id="textTitle">Text mode</h2>
+      <div class="grow"></div>
+      <button id="textMinus" class="tts-btn" aria-label="Decrease text size">A−</button>
+      <button id="textPlus" class="tts-btn" aria-label="Increase text size">A+</button>
+      <button id="textClose" class="tts-btn" aria-label="Close text mode">✕</button>
     </div>
+    <div id="textModalContent" class="text-content" tabindex="0" aria-describedby="textHelp"></div>
+    <p id="textHelp" class="sr-only">Text mode shows a simplified reading view. Press Escape to close.</p>
   </div>
+</div>
 
-  <div id="pageMask" aria-hidden="true"></div>
+<div id="pageMask" aria-hidden="true"></div>
 
-  <script>
-    (function(){
-      const el = (id) => document.getElementById(id);
-      const app = document.documentElement;
-      const resultsEl = el('results');
-      const countEl = el('count');
-      const statusEl = el('status');
-      const qEl = el('q');
-      const dateEl = el('date');
-      const form = el('searchForm');
-      const clearBtn = el('clear');
-      const sel = el('modeSelect');
-      const pageMask = el('pageMask');
-      const listenBtn = el('listen');
+<script>
+  (function(){
+    const $ = (id)=>document.getElementById(id);
+    const resultsEl = $('results'); const countEl = $('count'); const statusEl = $('status');
+    const form = $('searchForm'); const qEl=$('q'), dateEl=$('date'); const clearBtn=$('clear');
 
-      let DATA = [];
+    // ===== Data (embedded) =====
+    let DATA = [];
+    function init(){
+      try{ DATA = JSON.parse($('embeddedData').textContent); }
+      catch{ DATA = []; }
+      render(DATA);
+      countEl.textContent = DATA.length + ' result' + (DATA.length===1?'':'s');
+      statusEl.textContent = DATA.length ? 'Data loaded (embedded).' : 'No data found.';
+    }
 
-      async function init(){
-        try{
-          const res = await fetch('work-task-test.json', {cache:'no-store'});
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          DATA = await res.json();
-          render(DATA);
-          countEl.textContent = DATA.length + ' result' + (DATA.length===1?'':'s');
-          statusEl.textContent = 'Data loaded.';
-        }catch(e){
-          statusEl.innerHTML = 'Could not load <code>work-task-test.json</code>. Run a local server (e.g. <code>python -m http.server</code>) or use the embedded build.';
-          countEl.textContent = '0 results';
-        }
-      }
+    function monthIndex(name){ return ['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(String(name).toLowerCase()); }
+    function isoFromDataset(s){ if(!s) return ''; const t=String(s).trim().replace(/^[A-Za-z]+,\s*/, ''); const m=t.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/); if(!m) return ''; const d=parseInt(m[1],10), mi=monthIndex(m[2]), y=parseInt(m[3],10); if(mi<0) return ''; return y+'-'+String(mi+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+    function toHumanDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-').map(Number); const dt=new Date(y,m-1,d); try{return new Intl.DateTimeFormat('en-AU',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).format(dt);}catch{return dt.toDateString();} }
+    function escapeHtml(str){ return String(str).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
 
-      function monthIndex(name){ return ['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(String(name).toLowerCase()); }
-      function isoFromDataset(s){
-        if (!s) return '';
-        const trimmed = String(s).trim().replace(/^[A-Za-z]+,\s*/, '');
-        const m = trimmed.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
-        if (!m) return '';
-        const d = parseInt(m[1], 10), mi = monthIndex(m[2]), y = parseInt(m[3], 10);
-        if (mi < 0) return '';
-        return y + '-' + String(mi+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-      }
-      function toHumanDate(iso){
-        if (!iso) return '';
-        const [y,m,d] = iso.split('-').map(Number);
-        const dt = new Date(y, m-1, d);
-        try { return new Intl.DateTimeFormat('en-AU', {weekday:'long', year:'numeric', month:'long', day:'numeric'}).format(dt); }
-        catch { return dt.toDateString(); }
-      }
-      function escapeHtml(str){ return String(str).replace(/[&<>"']/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+    function render(list){
+      resultsEl.innerHTML='';
+      const total=list.length; countEl.textContent = total + ' result' + (total===1?'':'s');
+      if(!total){ const li=document.createElement('li'); li.className='card'; li.innerHTML='<p>No events match your filters.</p>'; resultsEl.appendChild(li); return; }
+      list.slice().sort((a,b)=>{ const ai=isoFromDataset(a.date), bi=isoFromDataset(b.date); return ai===bi ? (a.event||'').localeCompare(b.event||'') : ai.localeCompare(bi); })
+      .forEach(item=>{ const iso=isoFromDataset(item.date); const li=document.createElement('li'); li.className='card'; li.setAttribute('tabindex','-1'); li.innerHTML=`
+        <article>
+          <h3 class="event-title">${escapeHtml(item.event||'Untitled')}</h3>
+          <dl class="meta">
+            <div><dt>Date</dt><dd>${iso?toHumanDate(iso):escapeHtml(item.date||'')}</dd></div>
+            <div><dt>Organisation</dt><dd>${escapeHtml(item.organisation||'')}</dd></div>
+            <div><dt>Type</dt><dd>${escapeHtml(item.type||'')}</dd></div>
+            <div><dt>Location</dt><dd>${escapeHtml(item.location||'')}</dd></div>
+            <div><dt>District</dt><dd>${escapeHtml(item.district||'')}</dd></div>
+          </dl>
+        </article>`; resultsEl.appendChild(li); });
+    }
 
-      function render(list){
-        resultsEl.innerHTML = '';
-        const total = list.length;
-        countEl.textContent = total + ' result' + (total===1?'':'s');
-        if (!total){
-          const li = document.createElement('li');
-          li.className='card';
-          li.innerHTML='<p>No events match your filters.</p>';
-          resultsEl.appendChild(li);
-          return;
-        }
-        list.slice().sort((a,b)=>{
-          const ai = isoFromDataset(a.date); const bi = isoFromDataset(b.date);
-          return ai===bi ? (a.event||'').localeCompare(b.event||'') : ai.localeCompare(bi);
-        }).forEach(item=>{
-          const iso = isoFromDataset(item.date);
-          const li = document.createElement('li');
-          li.className='card';
-          li.setAttribute('tabindex','-1');
-          li.innerHTML = `
-            <article>
-              <h3 class="event-title">${escapeHtml(item.event||'Untitled')}</h3>
-              <dl class="meta">
-                <div><dt>Date</dt><dd>${iso ? toHumanDate(iso) : escapeHtml(item.date||'')}</dd></div>
-                <div><dt>Organisation</dt><dd>${escapeHtml(item.organisation||'')}</dd></div>
-                <div><dt>Type</dt><dd>${escapeHtml(item.type||'')}</dd></div>
-                <div><dt>Location</dt><dd>${escapeHtml(item.location||'')}</dd></div>
-                <div><dt>District</dt><dd>${escapeHtml(item.district||'')}</dd></div>
-              </dl>
-            </article>`;
-          resultsEl.appendChild(li);
-        });
-      }
+    form.addEventListener('submit', (e)=>{ e.preventDefault(); apply(); });
+    qEl.addEventListener('input', apply); dateEl.addEventListener('change', apply);
+    clearBtn.addEventListener('click', ()=>{ qEl.value=''; dateEl.value=''; render(DATA); announce('Filters cleared.'); });
+    function apply(){ const q=qEl.value.trim().toLowerCase(); const picked=dateEl.value; const out=DATA.filter(item=>{ const name=(item.event||'').toLowerCase(); const dateMatch=!picked||isoFromDataset(item.date)===picked; return (!q||name.includes(q))&&dateMatch; }); render(out); announce(out.length+' result'+(out.length===1?'':'s')+' found.'); }
 
-      form.addEventListener('submit', (e)=>{ e.preventDefault(); apply(); });
-      qEl.addEventListener('input', apply);
-      dateEl.addEventListener('change', apply);
-      clearBtn.addEventListener('click', ()=>{ qEl.value=''; dateEl.value=''; render(DATA); });
-      function apply(){
-        const q = qEl.value.trim().toLowerCase();
-        const picked = dateEl.value;
-        const out = DATA.filter(item=>{
-          const name = (item.event||'').toLowerCase();
-          const dateMatch = !picked || isoFromDataset(item.date) === picked;
-          return (!q || name.includes(q)) && dateMatch;
-        });
-        render(out);
-      }
+    function announce(msg){ if(statusEl) statusEl.textContent = msg; }
 
-      function announce(msg){ if(statusEl) statusEl.textContent = msg; }
+    // ===== Mask =====
+    const pageMask = $('pageMask'); let center=40, height=30;
+    function setMask(on){ pageMask.style.display=on?'block':'none'; if(on) announce('Page mask on. Use Arrow Up/Down to move, +/- to resize, Esc to exit.'); else announce('Page mask off.'); }
+    function maskApply(){ pageMask.style.setProperty('--mask-top', center+'vh'); pageMask.style.setProperty('--mask-height', height+'vh'); }
+    document.addEventListener('keydown', (e)=>{ const t=e.target, tag=(t&&t.tagName||'').toLowerCase(), typing=tag==='input'||tag==='textarea'||(t&&t.isContentEditable); if(typing) return; if(pageMask.style.display==='block'){ switch(e.key){ case 'ArrowUp': center=Math.max(5,center-2); maskApply(); e.preventDefault(); break; case 'ArrowDown': center=Math.min(95,center+2); maskApply(); e.preventDefault(); break; case '+': case '=': height=Math.min(90,height+2); maskApply(); e.preventDefault(); break; case '-': case '_': height=Math.max(10,height-2); maskApply(); e.preventDefault(); break; case 'Escape': setMask(false); break; } } });
 
-      // TTS toolbar
-      const synth = window.speechSynthesis;
-      const ttsBar = el('ttsBar'), p=el('ttsPlay'), sbtn=el('ttsStop'), prv=el('ttsPrev'), nxt=el('ttsNext'), x=el('ttsClose'), vbtn=el('ttsVolBtn'), vr=el('ttsVol'), rbtn=el('ttsRateBtn'), rr=el('ttsRate');
-      let voices=[], queue=[], idx=0, playing=false, paused=false, volume=1, rate=1;
-      function loadVoices(){ voices = synth?.getVoices?.()||[]; if (voices.length) return Promise.resolve(); return new Promise(r=>{ const t=setInterval(()=>{ voices=synth.getVoices(); if(voices.length){ clearInterval(t); r(); }},150); setTimeout(()=>{ clearInterval(t); r(); },2000); }); }
-      function vpick(){ const prefs=['en-AU','en-GB','en-US']; for(const p of prefs){ const v=voices.find(v=>v.lang&&v.lang.startsWith(p)); if(v) return v; } return voices[0]; }
-      function splitSentences(s){ const m=String(s||'').trim().match(/[^.!?]+[.!?]+|[^.!?]+$/g); return m&&m.length?m:[]; }
-      function tShow(){ ttsBar.hidden=false; } function tHide(){ ttsBar.hidden=true; }
-      function tUpdate(){ p.textContent=(playing&&!paused)?'⏸':'▶'; }
-      function cancel(){ try{synth.cancel();}catch{} playing=false; paused=false; tUpdate(); announce('Stopped.'); }
-      function speakAt(i){ if(i<0||i>=queue.length){ cancel(); return; } idx=i; const u=new SpeechSynthesisUtterance(queue[idx]); const v=vpick(); if(v) u.voice=v; u.rate=rate; u.volume=volume; u.onend=()=>{ if(playing&&!paused){ if(++idx<queue.length) speakAt(idx); else { playing=false; tUpdate(); announce('Done.'); } } }; u.onerror=()=>{ playing=false; tUpdate(); announce('Speech error.'); }; synth.speak(u); }
-      function playPause(){ if(!queue.length) return; if(playing&&!paused){ synth.pause(); paused=true; announce('Paused.'); } else if(playing&&paused){ synth.resume(); paused=false; announce('Resumed.'); } else { playing=true; paused=false; speakAt(idx); announce('Reading…'); } tUpdate(); }
-      function prev(){ if(!queue.length) return; cancel(); playing=true; paused=false; speakAt(Math.max(0, idx-1)); tUpdate(); }
-      function next(){ if(!queue.length) return; cancel(); playing=true; paused=false; speakAt(Math.min(queue.length-1, idx+1)); tUpdate(); }
+    // ===== TTS =====
+    const synth=window.speechSynthesis; const ttsBar=$('ttsBar'), p=$('ttsPlay'), sbtn=$('ttsStop'), prv=$('ttsPrev'), nxt=$('ttsNext'), x=$('ttsClose'), vbtn=$('ttsVolBtn'), vr=$('ttsVol'), rbtn=$('ttsRateBtn'), rr=$('ttsRate');
+    let voices=[], queue=[], idx=0, playing=false, paused=false, volume=1, rate=1;
+    function loadVoices(){ voices = synth?.getVoices?.()||[]; if(voices.length) return Promise.resolve(); return new Promise(r=>{ const t=setInterval(()=>{ voices=synth.getVoices(); if(voices.length){ clearInterval(t); r(); }},150); setTimeout(()=>{ clearInterval(t); r(); },2000); }); }
+    function vpick(){ const prefs=['en-AU','en-GB','en-US']; for(const p of prefs){ const v=voices.find(v=>v.lang&&v.lang.startsWith(p)); if(v) return v; } return voices[0]; }
+    function splitSentences(s){ const m=String(s||'').trim().match(/[^.!?]+[.!?]+|[^.!?]+$/g); return m&&m.length?m:[]; }
+    function tShow(){ ttsBar.hidden=false; } function tHide(){ ttsBar.hidden=true; } function tUpdate(){ p.textContent=(playing&&!paused)?'⏸':'▶'; }
+    function cancel(){ try{synth.cancel();}catch{} playing=false; paused=false; tUpdate(); announce('Stopped.'); }
+    function speakAt(i){ if(i<0||i>=queue.length){ cancel(); return; } idx=i; const u=new SpeechSynthesisUtterance(queue[idx]); const v=vpick(); if(v) u.voice=v; u.rate=rate; u.volume=volume; u.onend=()=>{ if(playing&&!paused){ if(++idx<queue.length) speakAt(idx); else { playing=false; tUpdate(); announce('Done.'); } } }; u.onerror=()=>{ playing=false; tUpdate(); announce('Speech error.'); }; synth.speak(u); }
+    function playPause(){ if(!queue.length) return; if(playing&&!paused){ synth.pause(); paused=true; announce('Paused.'); } else if(playing&&paused){ synth.resume(); paused=false; announce('Resumed.'); } else { playing=true; paused=false; speakAt(idx); announce('Reading…'); } tUpdate(); }
+    function prev(){ if(!queue.length) return; cancel(); playing=true; paused=false; speakAt(Math.max(0,idx-1)); tUpdate(); }
+    function next(){ if(!queue.length) return; cancel(); playing=true; paused=false; speakAt(Math.min(queue.length-1, idx+1)); tUpdate(); }
+    function speak(text){ queue=splitSentences(text); idx=0; if(!queue.length) return; tShow(); playing=true; paused=false; tUpdate(); speakAt(0); }
+    function readSummary(){ const h=document.querySelector('h1')?.textContent||'Event Search'; const c=countEl.textContent||''; const f=document.querySelector('#results .event-title')?.textContent||''; return [h,'Use the form to search by event name and date.',c,f?('First result: '+f):''].filter(Boolean).join(' '); }
+    $('listenPlayBtn').addEventListener('click', async ()=>{ await loadVoices(); speak(readSummary()); });
+    $('listenMainBtn').addEventListener('click', async ()=>{ await loadVoices(); speak(readSummary()); });
+    p.addEventListener('click', playPause); sbtn.addEventListener('click', cancel); prv.addEventListener('click', prev); nxt.addEventListener('click', next);
+    x.addEventListener('click', ()=>{ cancel(); tHide(); });
+    vbtn.addEventListener('click', ()=>{ const on = vr.hasAttribute('hidden'); vr.toggleAttribute('hidden'); vbtn.setAttribute('aria-expanded', String(on)); });
+    rbtn.addEventListener('click', ()=>{ const on = rr.hasAttribute('hidden'); rr.toggleAttribute('hidden'); rbtn.setAttribute('aria-expanded', String(on)); });
+    vr.addEventListener('input', ()=>{ volume=parseFloat(vr.value||'1'); }); rr.addEventListener('input', ()=>{ rate=parseFloat(rr.value||'1'); });
 
-      p.addEventListener('click', playPause);
-      sbtn.addEventListener('click', cancel);
-      prv.addEventListener('click', prev);
-      nxt.addEventListener('click', next);
-      x.addEventListener('click', ()=>{ cancel(); tHide(); });
-      vbtn.addEventListener('click', ()=>{ const on = vr.hasAttribute('hidden'); vr.toggleAttribute('hidden'); vbtn.setAttribute('aria-expanded', String(on)); });
-      rbtn.addEventListener('click', ()=>{ const on = rr.hasAttribute('hidden'); rr.toggleAttribute('hidden'); rbtn.setAttribute('aria-expanded', String(on)); });
-      vr.addEventListener('input', ()=>{ volume=parseFloat(vr.value||'1'); });
-      rr.addEventListener('input', ()=>{ rate=parseFloat(rr.value||'1'); });
+    // ===== Text Mode popup =====
+    const textModal=$('textModal'), textContent=$('textModalContent'), textMinus=$('textMinus'), textPlus=$('textPlus'), textClose=$('textClose'); let tmFs=1.125, lastFocus=null;
+    function buildTextBlocks(){ const out=[]; const h=document.querySelector('h1')?.textContent||''; if(h) out.push({tag:'h3', text:h}); const c=countEl.textContent||''; if(c) out.push({tag:'p', text:c}); document.querySelectorAll('#results .card').forEach(card=>{ const title=card.querySelector('.event-title')?.textContent||'Event'; const fields=[]; card.querySelectorAll('dl.meta > div').forEach(div=>{ const k=div.querySelector('dt')?.textContent?.trim(); const v=div.querySelector('dd')?.textContent?.trim(); if(k&&v) fields.push(k+': '+v); }); out.push({tag:'h3', text:title}); if(fields.length) out.push({tag:'p', text:fields.join(' · ')}); }); return out; }
+    function openText(){ textContent.innerHTML=''; buildTextBlocks().forEach(b=>{ const n=document.createElement(b.tag); n.textContent=b.text; textContent.appendChild(n); }); tmFs=1.125; textContent.style.setProperty('--tm-fs', tmFs+'rem'); lastFocus=document.activeElement; textModal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; textContent.focus(); announce('Text mode opened.'); }
+    function closeText(){ textModal.setAttribute('aria-hidden','true'); document.body.style.overflow=''; (lastFocus||$('listenMenuBtn'))?.focus(); announce('Text mode closed.'); }
+    textMinus.addEventListener('click', ()=>{ tmFs=Math.max(0.9, tmFs-0.1); textContent.style.setProperty('--tm-fs', tmFs+'rem'); });
+    textPlus.addEventListener('click', ()=>{ tmFs=Math.min(2.0, tmFs+0.1); textContent.style.setProperty('--tm-fs', tmFs+'rem'); });
+    textClose.addEventListener('click', closeText);
+    textModal.addEventListener('keydown', (e)=>{ if(textModal.getAttribute('aria-hidden')==='true') return; if(e.key==='Escape'){ e.preventDefault(); closeText(); return; } if(e.key==='Tab'){ const f=textModal.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'); const list=Array.from(f).filter(n=>!n.hasAttribute('disabled') && n.offsetParent!==null); if(!list.length) return; const first=list[0], last=list[list.length-1]; if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); } else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); } } });
 
-      function readSummary(){ const h=document.querySelector('h1')?.textContent||'Event Search'; const c=countEl.textContent||''; const f=document.querySelector('#results .event-title')?.textContent||''; return [h,'Use the form to search by event name and date.',c,f?('First result: '+f):''].filter(Boolean).join(' '); }
-      function speak(text){ queue=splitSentences(text); idx=0; if(!queue.length) return; tShow(); playing=true; paused=false; tUpdate(); speakAt(0); }
-      listenBtn.addEventListener('click', async ()=>{ await loadVoices(); speak(readSummary()); });
+    // ===== Listen dropdown & switches =====
+    const menuBtn=$('listenMenuBtn'), menu=$('listenMenu'), miText=$('miText'), miMask=$('miMask');
+    const swKb=$('swKb'), swListen=$('swListen'), swEnlarge=$('swEnlarge'), swForm=$('swForm');
+    let kb=false, clickListen=false, formRead=false;
+    function openMenu(){ menu.setAttribute('aria-hidden','false'); menuBtn.setAttribute('aria-expanded','true'); }
+    function closeMenu(){ menu.setAttribute('aria-hidden','true'); menuBtn.setAttribute('aria-expanded','false'); }
+    menuBtn.addEventListener('click', (e)=>{ e.stopPropagation(); const open = menu.getAttribute('aria-hidden')==='false'; if(open) closeMenu(); else openMenu(); });
+    document.addEventListener('click', (e)=>{ if(!menu.contains(e.target) && !menuBtn.contains(e.target)) closeMenu(); });
+    menu.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeMenu(); menuBtn.focus(); } });
+    // BUGFIX: clicking a menu row should trigger the switch exactly once
+    menu.addEventListener('click', (e)=>{ const row=e.target.closest('.menu-item'); if(!row) return; const sw=row.querySelector('[role="switch"]'); if(sw && e.target!==sw){ sw.click(); } });
 
-      // Text mode popup
-      const textModal = el('textModal'), textContent = el('textModalContent'), textMinus = el('textMinus'), textPlus = el('textPlus'), textClose = el('textClose');
-      let tmFs = 1.125, lastFocus=null;
-      function buildTextBlocks(){ const out=[]; const h=document.querySelector('h1')?.textContent||''; if(h) out.push({tag:'h3', text:h}); const c=countEl.textContent||''; if(c) out.push({tag:'p', text:c}); document.querySelectorAll('#results .card').forEach(card=>{ const title=card.querySelector('.event-title')?.textContent||'Event'; const fields=[]; card.querySelectorAll('dl.meta > div').forEach(div=>{ const k=div.querySelector('dt')?.textContent?.trim(); const v=div.querySelector('dd')?.textContent?.trim(); if(k&&v) fields.push(k+': '+v); }); out.push({tag:'h3', text:title}); if(fields.length) out.push({tag:'p', text:fields.join(' · ')}); }); return out; }
-      function openText(){ textContent.innerHTML=''; buildTextBlocks().forEach(b=>{ const n=document.createElement(b.tag); n.textContent=b.text; textContent.appendChild(n); }); tmFs=1.125; textContent.style.setProperty('--tm-fs', tmFs+'rem'); lastFocus=document.activeElement; textModal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; textContent.focus(); announce('Text mode opened. Press Escape to close.'); }
-      function closeText(){ textModal.setAttribute('aria-hidden','true'); document.body.style.overflow=''; (lastFocus||sel)?.focus(); announce('Text mode closed.'); }
-      textMinus.addEventListener('click', ()=>{ tmFs=Math.max(0.9, tmFs-0.1); textContent.style.setProperty('--tm-fs', tmFs+'rem'); });
-      textPlus.addEventListener('click', ()=>{ tmFs=Math.min(2.0, tmFs+0.1); textContent.style.setProperty('--tm-fs', tmFs+'rem'); });
-      textClose.addEventListener('click', closeText);
-      textModal.addEventListener('keydown', (e)=>{ if (textModal.getAttribute('aria-hidden')==='true') return; if (e.key==='Escape'){ e.preventDefault(); closeText(); return; } if (e.key==='Tab'){ const f=textModal.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'); const list=Array.from(f).filter(n=>!n.hasAttribute('disabled') && n.offsetParent!==null); if(!list.length) return; const first=list[0], last=list[list.length-1]; if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); } else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); } } });
+    function setPressed(sw,on){ sw.setAttribute('aria-checked', String(!!on)); }
 
-      // Modes
-      let kb=false, clickListen=false, formRead=false;
-      function setMode(mode){
-        kb=false; clickListen=false; formRead=false;
-        app.removeAttribute('data-mode');
-        pageMask.style.display='none';
-        form.removeEventListener('focusin', onFormFocus, true);
-        form.removeEventListener('input', onFormInput, true);
+    function toggleKb(on){ kb=on; setPressed(swKb,on); announce(on?'Keyboard mode on.':'Keyboard mode off.'); }
+    function toggleClickListen(on){ clickListen=on; setPressed(swListen,on); announce(on?'Click and listen on.':'Click and listen off.'); }
+    function toggleEnlarge(on){ setPressed(swEnlarge,on); if(on) document.documentElement.setAttribute('data-mode','enlarge'); else if(document.documentElement.getAttribute('data-mode')==='enlarge') document.documentElement.removeAttribute('data-mode'); announce(on?'Enlarge text on.':'Enlarge text off.'); }
+    function toggleForm(on){ formRead=on; setPressed(swForm,on); if(on){ form.addEventListener('focusin', onFormFocus, true); form.addEventListener('input', onFormInput, true); announce('Form reading on.'); } else { form.removeEventListener('focusin', onFormFocus, true); form.removeEventListener('input', onFormInput, true); announce('Form reading off.'); } }
 
-        if (mode==='keyboard'){ kb=true; announce('Keyboard mode on.'); }
-        else if (mode==='click-listen'){ clickListen=true; announce('Click-to-listen on.'); }
-        else if (mode==='enlarge'){ app.setAttribute('data-mode','enlarge'); announce('Enlarge text on.'); }
-        else if (mode==='text'){ openText(); }
-        else if (mode==='mask'){ pageMask.style.display='block'; announce('Page mask on.'); }
-        else if (mode==='form-read'){ formRead=true; form.addEventListener('focusin', onFormFocus, true); form.addEventListener('input', onFormInput, true); announce('Form reading on.'); }
-        else { announce('Normal mode.'); }
-      }
-      sel.addEventListener('change', ()=> setMode(sel.value));
+    swKb.addEventListener('click', ()=> toggleKb(swKb.getAttribute('aria-checked')!=='true'));
+    swKb.addEventListener('keydown', (e)=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleKb(swKb.getAttribute('aria-checked')!=='true'); } });
+    swListen.addEventListener('click', ()=> toggleClickListen(swListen.getAttribute('aria-checked')!=='true'));
+    swListen.addEventListener('keydown', (e)=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleClickListen(swListen.getAttribute('aria-checked')!=='true'); } });
+    swEnlarge.addEventListener('click', ()=> toggleEnlarge(swEnlarge.getAttribute('aria-checked')!=='true'));
+    swEnlarge.addEventListener('keydown', (e)=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleEnlarge(swEnlarge.getAttribute('aria-checked')!=='true'); } });
+    swForm.addEventListener('click', ()=> toggleForm(swForm.getAttribute('aria-checked')!=='true'));
+    swForm.addEventListener('keydown', (e)=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleForm(swForm.getAttribute('aria-checked')!=='true'); } });
 
-      function onFormFocus(e){ if(!formRead) return; const t=e.target; if(!t||!('value'in t)) return; const lab=(document.querySelector('label[for="'+t.id+'"]')?.textContent||t.name||'Field'); const help=(t.getAttribute('aria-describedby')||'').split(/\s+/).map(id=>document.getElementById(id)?.textContent||'').filter(Boolean).join(' '); speak([lab, help&&('Hint: '+help)].filter(Boolean).join('. ')); }
-      let deb=null; function onFormInput(e){ if(!formRead) return; clearTimeout(deb); const t=e.target; deb=setTimeout(()=>{ const lab=(document.querySelector('label[for="'+t.id+'"]')?.textContent||t.name||'Field'); speak(lab+' updated.'); }, 600); }
+    miText.addEventListener('click', ()=>{ closeMenu(); openText(); });
+    miMask.addEventListener('click', ()=>{ const on = document.getElementById('pageMask').style.display!=='block'; setMask(on); maskApply(); });
 
-      // Result click-to-listen
-      resultsEl.addEventListener('click', (e)=>{ if(!clickListen) return; const card=e.target.closest('.card'); if(card){ const title=card.querySelector('.event-title')?.textContent||''; speak(title); }});
+    resultsEl.addEventListener('click', (e)=>{ if(!clickListen) return; const card=e.target.closest('.card'); if(card){ const title=card.querySelector('.event-title')?.textContent||'Event'; const date=card.querySelector('dd')?.textContent||''; speak([title,date].filter(Boolean).join('. ')); } });
 
-      // Init
-      init();
-    })();
-  </script>
+    function labelFor(ctrl){ const id=ctrl.id; if(id){ const lab=document.querySelector('label[for="'+id+'"]'); if(lab) return lab.textContent.trim(); } return ctrl.getAttribute('aria-label') || ctrl.name || ctrl.id || 'Field'; }
+    function getDescribedText(ctrl){ const ids=(ctrl.getAttribute('aria-describedby')||'').split(/\s+/).filter(Boolean); return ids.map(id=>document.getElementById(id)?.textContent||'').filter(Boolean).join(' '); }
+    function onFormFocus(e){ if(!formRead) return; const t=e.target; if(!t||!('value' in t)) return; const msg=[labelFor(t), getDescribedText(t) ? ('Hint: '+getDescribedText(t)) : ''].filter(Boolean).join('. '); speak(msg); }
+    let inputDebounce; function onFormInput(e){ if(!formRead) return; clearTimeout(inputDebounce); const t=e.target; inputDebounce=setTimeout(()=>{ speak(labelFor(t)+' updated.'); }, 700); }
+
+    init();
+  })();
+</script>
+
+<div id="pageMask" aria-hidden="true"></div>
 </body>
 </html>
