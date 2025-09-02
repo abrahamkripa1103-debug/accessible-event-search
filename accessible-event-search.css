@@ -59,3 +59,42 @@ input[type="date"] {
   background-color: var(--card); /* lighter background */
   color: var(--text);
 }
+
+
+
+/* === Visibility fixes for dropdown menu (Settings / Text Mode) === */
+@media (prefers-color-scheme: dark) {
+  .listen-menu{
+    background: #111827;           /* high-contrast dark */
+    color: #ffffff;                /* bright text */
+    border-color: #374151;
+  }
+  .menu-sep{ background:#374151; }
+  .menu-small{ color:#d1d5db; }
+}
+/* Ensure labels inside items inherit the high-contrast color */
+.listen-menu .menu-item{ color: inherit; }
+.listen-menu .menu-item .menu-label{ color: inherit; }
+/* Hover/focus state with strong contrast */
+.listen-menu .menu-item:hover,
+.listen-menu .menu-item:focus-visible{
+  background:#1f2937;
+  outline-color:#fbbf24; /* bright focus ring */
+}
+
+/* Optional: make the Page Mask item a bit more readable */
+#miMask .menu-small{ opacity: 0.9; }
+
+/* Optional: darker mask shade for better contrast with UI */
+:root { --mask-shade: rgba(0,0,0,.6); }
+@media (prefers-color-scheme: dark) {
+  :root { --mask-shade: rgba(0,0,0,.55); }
+}
+#pageMask{
+  background: linear-gradient(
+    to bottom,
+    var(--mask-shade) 0 var(--mask-top-stop),
+    transparent var(--mask-top-stop) var(--mask-bottom-start),
+    var(--mask-shade) var(--mask-bottom-start) 100%
+  );
+}
