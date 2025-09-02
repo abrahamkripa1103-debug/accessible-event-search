@@ -48,4 +48,14 @@
     .text-toolbar{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;border-bottom:1px solid var(--border)} .text-toolbar h2{margin:0;font-size:1rem} .text-toolbar .grow{flex:1}
     .text-content{padding:1rem;overflow:auto;font-size:var(--tm-fs,1.125rem);line-height:1.65} .text-content h3{margin:.75rem 0 .25rem}
     .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-  
+
+/* Force visible calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(2); /* makes it light on dark bg */
+  cursor: pointer;
+}
+
+input[type="date"] {
+  background-color: var(--card); /* lighter background */
+  color: var(--text);
+}
