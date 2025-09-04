@@ -2,220 +2,331 @@
 <html lang="en-AU">
 <head>
     <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1" name="viewport"/>
-    <title>
-        Accessible Event Search (Embedded, Fixed)
-    </title>
-    <link href="accessible-event-search.css" rel="stylesheet"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Accessible Event Search (No-fetch, Embedded Data)</title>
+    <link rel="stylesheet" href="accessible-event-search.css" />
 </head>
 <body>
-<!-- Embedded data so no fetch is needed -->
 <div class="container">
     <header role="banner">
-        <h1>
-            Event Search
-        </h1>
-        <p class="lede">
-            Search by
-            <strong>
-                event name
-            </strong>
-            and
-            <strong>
-                event date
-            </strong>
-            .
-        </p>
-        <div aria-label="Assistive controls" class="toolbar" role="group">
+        <h1>Event Search</h1>
+        <p class="lede">Search by <strong>event name</strong> and <strong>event date</strong>.</p>
+        <div class="toolbar" role="group" aria-label="Assistive controls">
             <div class="listen-wrap">
-                <button aria-controls="listenMenu" aria-expanded="false" aria-haspopup="true" aria-label="Open menu" class="btn secondary segment-left" id="listenMenuBtn">
-                    ☰
-                </button>
-                <button aria-label="Listen" class="btn secondary segment-mid" id="listenMainBtn">
-                    🔈 Listen
-                </button>
-                <button aria-label="Play" class="btn play segment-right" id="listenPlayBtn">
-                    ▶
-                </button>
-                <div aria-hidden="true" class="listen-menu" id="listenMenu" role="menu">
-                    <button class="menu-item" id="miSettings" role="menuitem">
-        <span class="menu-label">
-         Settings
-        </span>
-                    </button>
-                    <div aria-hidden="true" class="menu-sep">
+                <button id="listenMenuBtn" class="btn secondary segment-left" aria-haspopup="true" aria-controls="listenMenu" aria-expanded="false" aria-label="Open menu">☰</button>
+                <button id="listenMainBtn" class="btn secondary segment-mid" aria-label="Listen">🔈 Listen</button>
+                <button id="listenPlayBtn" class="btn play segment-right" aria-label="Play">▶</button>
+                <div id="listenMenu" class="listen-menu" role="menu" aria-hidden="true">
+                    <div class="menu-item" role="menuitem">
+                        <span class="menu-label">Keyboard Mode</span>
+                        <span id="swKb" class="switch" role="switch" aria-checked="false" tabindex="0"><span class="knob"></span></span>
                     </div>
                     <div class="menu-item" role="menuitem">
-        <span class="menu-label">
-         Keyboard Mode
-        </span>
-                        <span aria-checked="false" class="switch" id="swKb" role="switch" tabindex="0">
-         <span class="knob">
-         </span>
-        </span>
+                        <span class="menu-label">Click and Listen</span>
+                        <span id="swListen" class="switch" role="switch" aria-checked="false" tabindex="0"><span class="knob"></span></span>
                     </div>
                     <div class="menu-item" role="menuitem">
-        <span class="menu-label">
-         Click and Listen
-        </span>
-                        <span aria-checked="false" class="switch" id="swListen" role="switch" tabindex="0">
-         <span class="knob">
-         </span>
-        </span>
+                        <span class="menu-label">Enlarge Text</span>
+                        <span id="swEnlarge" class="switch" role="switch" aria-checked="false" tabindex="0"><span class="knob"></span></span>
                     </div>
                     <div class="menu-item" role="menuitem">
-        <span class="menu-label">
-         Enlarge Text
-        </span>
-                        <span aria-checked="false" class="switch" id="swEnlarge" role="switch" tabindex="0">
-         <span class="knob">
-         </span>
-        </span>
+                        <span class="menu-label">Form Reading</span>
+                        <span id="swForm" class="switch" role="switch" aria-checked="false" tabindex="0"><span class="knob"></span></span>
                     </div>
-                    <div class="menu-item" role="menuitem">
-        <span class="menu-label">
-         Form Reading
-        </span>
-                        <span aria-checked="false" class="switch" id="swForm" role="switch" tabindex="0">
-         <span class="knob">
-         </span>
-        </span>
-                    </div>
-                    <div aria-hidden="true" class="menu-sep">
-                    </div>
-                    <button class="menu-item" id="miText" role="menuitem">
-        <span class="menu-label">
-         Text Mode
-        </span>
-                    </button>
-                    <button class="menu-item" id="miMask" role="menuitem">
-        <span class="menu-label">
-         Page Mask
-        </span>
-                        <span class="menu-small">
-         (↑/↓ move, +/- size)
-        </span>
+                    <div class="menu-sep" aria-hidden="true"></div>
+                    <button id="miText" class="menu-item" role="menuitem"><span class="menu-label">Text Mode</span></button>
+                    <button id="miMask" class="menu-item" role="menuitem">
+                        <span class="menu-label">Page Mask</span>
+                        <span class="menu-small">(↑/↓ move, +/- size)</span>
                     </button>
                 </div>
             </div>
         </div>
     </header>
+
     <main id="main" role="main">
-        <form aria-describedby="searchHelp" id="searchForm" role="search">
+        <form id="searchForm" role="search" aria-describedby="searchHelp">
             <fieldset>
-                <legend>
-                    Search events
-                </legend>
+                <legend>Search events</legend>
                 <div class="grid">
                     <div class="field">
-                        <label for="q">
-                            Event name
-                        </label>
-                        <input aria-describedby="qHelp" autocomplete="off" id="q" name="q" placeholder="e.g. Carers Day Out" type="text"/>
-                        <div class="assist" id="qHelp">
-                            Search matches the event title.
-                        </div>
+                        <label for="q">Event name</label>
+                        <input id="q" name="q" type="text" autocomplete="off" placeholder="e.g. Carers Day Out" aria-describedby="qHelp" />
+                        <div id="qHelp" class="assist">Search matches the event title.</div>
                     </div>
                     <div class="field">
-                        <label for="date">
-                            Event date
-                        </label>
-                        <input aria-describedby="dateHelp" id="date" name="date" type="date"/>
-                        <div class="assist" id="dateHelp">
-                            Pick a date (YYYY-MM-DD).
-                        </div>
+                        <label for="date">Event date</label>
+                        <input id="date" name="date" type="date" aria-describedby="dateHelp" />
+                        <div id="dateHelp" class="assist">Pick a date (YYYY-MM-DD).</div>
                     </div>
                 </div>
                 <div class="toolbar" style="margin-top:.5rem">
-                    <button class="btn" type="submit">
-                        Search
-                    </button>
-                    <button class="btn secondary" id="clear" type="button">
-                        Clear
-                    </button>
+                    <button type="submit" class="btn">Search</button>
+                    <button type="button" id="clear" class="btn secondary">Clear</button>
                 </div>
             </fieldset>
-            <p class="assist" id="searchHelp">
-                Use this form to filter events by name and/or a specific date.
-            </p>
+            <p id="searchHelp" class="assist">Use this form to filter events by name and/or a specific date.</p>
         </form>
-        <div aria-atomic="true" aria-live="polite" class="results-meta">
-            <div class="results-count" id="count">
-                No results yet. Enter filters and press Search.
-            </div>
-            <div aria-live="polite" class="assist" id="status" role="status">
-            </div>
+
+        <div class="results-meta" aria-live="polite" aria-atomic="true">
+            <div id="count" class="results-count">No results yet. Enter filters and press Search.</div>
+            <div id="status" class="assist" role="status" aria-live="polite"></div>
         </div>
+
         <section aria-label="Search results">
-            <ul class="list" id="results">
-            </ul>
+            <ul id="results" class="list"></ul>
         </section>
     </main>
-    <footer>
-        <p>
-            Menu includes: Keyboard, Click-to-listen, Enlarge text, Form reading, Text mode, and Page mask.
-        </p>
-    </footer>
+
+    <footer></footer>
 </div>
-<div aria-label="Listen controls" hidden="" id="ttsBar" role="region">
-    <button aria-label="Play/Pause" class="tts-btn" id="ttsPlay">
-        ▶
-    </button>
-    <button aria-label="Stop" class="tts-btn" id="ttsStop">
-        ■
-    </button>
-    <button aria-label="Previous" class="tts-btn" id="ttsPrev">
-        ⏮
-    </button>
-    <button aria-label="Next" class="tts-btn" id="ttsNext">
-        ⏭
-    </button>
+
+<div id="ttsBar" role="region" aria-label="Listen controls" hidden>
+    <button id="ttsPlay" class="tts-btn" aria-label="Play/Pause">▶</button>
+    <button id="ttsStop" class="tts-btn" aria-label="Stop">■</button>
+    <button id="ttsPrev" class="tts-btn" aria-label="Previous">⏮</button>
+    <button id="ttsNext" class="tts-btn" aria-label="Next">⏭</button>
     <div class="tts-group">
-        <button aria-controls="ttsVol" aria-expanded="false" aria-label="Volume" class="tts-btn" id="ttsVolBtn">
-            🔊
-        </button>
-        <input class="tts-range" hidden="" id="ttsVol" max="1" min="0" step="0.1" type="range" value="1"/>
+        <button id="ttsVolBtn" class="tts-btn" aria-label="Volume" aria-controls="ttsVol" aria-expanded="false">🔊</button>
+        <input id="ttsVol" class="tts-range" type="range" min="0" max="1" step="0.1" value="1" hidden />
     </div>
     <div class="tts-group">
-        <button aria-controls="ttsRate" aria-expanded="false" aria-label="Speech rate" class="tts-btn" id="ttsRateBtn">
-            ⏱
-        </button>
-        <input class="tts-range" hidden="" id="ttsRate" max="1.6" min="0.5" step="0.1" type="range" value="1"/>
+        <button id="ttsRateBtn" class="tts-btn" aria-label="Speech rate" aria-controls="ttsRate" aria-expanded="false">⏱</button>
+        <input id="ttsRate" class="tts-range" type="range" min="0.5" max="1.6" step="0.1" value="1" hidden />
     </div>
-    <button aria-label="Close" class="tts-btn" id="ttsClose">
-        ✕
-    </button>
+    <button id="ttsClose" class="tts-btn" aria-label="Close">✕</button>
 </div>
-<div aria-hidden="true" aria-labelledby="textTitle" aria-modal="true" id="textModal" role="dialog">
+
+<div id="textModal" role="dialog" aria-modal="true" aria-labelledby="textTitle" aria-hidden="true">
     <div class="text-dialog">
         <div class="text-toolbar">
-            <h2 id="textTitle">
-                Text mode
-            </h2>
-            <div class="grow">
-            </div>
-            <button aria-label="Decrease text size" class="tts-btn" id="textMinus">
-                A−
-            </button>
-            <button aria-label="Increase text size" class="tts-btn" id="textPlus">
-                A+
-            </button>
-            <button aria-label="Close text mode" class="tts-btn" id="textClose">
-                ✕
-            </button>
+            <h2 id="textTitle">Text mode</h2>
+            <div class="grow"></div>
+            <button id="textMinus" class="tts-btn" aria-label="Decrease text size">A−</button>
+            <button id="textPlus" class="tts-btn" aria-label="Increase text size">A+</button>
+            <button id="textClose" class="tts-btn" aria-label="Close text mode">✕</button>
         </div>
-        <div aria-describedby="textHelp" class="text-content" id="textModalContent" tabindex="0">
-        </div>
-        <p class="sr-only" id="textHelp">
-            Text mode shows a simplified reading view. Press Escape to close.
-        </p>
+        <div id="textModalContent" class="text-content" tabindex="0" aria-describedby="textHelp"></div>
+        <p id="textHelp" class="sr-only">Text mode shows a simplified reading view. Press Escape to close.</p>
     </div>
 </div>
-<div aria-hidden="true" id="pageMask">
-</div>
-<div aria-hidden="true" id="pageMask">
-</div>
-<script defer="True" src="app.js">
+
+<div id="pageMask" aria-hidden="true"></div>
+
+<!-- Embedded data so no fetch is needed -->
+<script id="eventsData" type="application/json">
+    [
+        {
+            "organisation":"Test Centre 1",
+            "type":"Carers of people living with dementia",
+            "event":"Wellness and Pamper Day for Older Carers",
+            "date":"Monday, 1 October 2016",
+            "location":"Gosford",
+            "district":"Central Coast"
+        },
+        {
+            "organisation":"Test Centre 2",
+            "type":"All carers",
+            "event":"Carers Pamper Day",
+            "date":"Friday, 10 October 2016",
+            "location":"Baulkham Hills",
+            "district":"Cumberland/Prospect"
+        },
+        {
+            "organisation":"Test Centre 3",
+            "type":"Carers of younger people (under 65 years of age) with a disability",
+            "event":"Side by Side Carers Luncheon",
+            "date":"Saturday, 30 October 2016",
+            "location":"Pottsville ",
+            "district":"Far north coast"
+        },
+        {
+            "organisation":"Test Centre 4",
+            "type":"Carers of people with a mental illness",
+            "event":"Carers Forum",
+            "date":"Sunday, 16 October 2016",
+            "location":"Yamba",
+            "district":"Far north coast"
+        },
+        {
+            "organisation":"Test Centre 5",
+            "type":"All carers",
+            "event":"Carer Connections Movie Day",
+            "date":"Thursday, 20 October 2016",
+            "location":"Glendale",
+            "district":"Hunter"
+        },
+        {
+            "organisation":"Test Centre 5",
+            "type":"Carers of people with a chronic illness",
+            "event":"Parkinson's Carers Coffee & Cake Break",
+            "date":"Thursday, 20 October 2016",
+            "location":"Newcastle ",
+            "district":"Hunter"
+        },
+        {
+            "organisation":"Test Centre 6",
+            "type":"All carers",
+            "event":"CRCC National Carers Week Tour & Lunch ",
+            "date":"Thursday, 20 October 2016",
+            "location":"Newcastle ",
+            "district":"Hunter"
+        },
+        {
+            "organisation":"Test Centre 7",
+            "type":"Carers of younger people (under 65 years of age) with a disability",
+            "event":"Group Outing",
+            "date":"Sunday, 2 October 2016",
+            "location":"Kiama",
+            "district":"Illawara"
+        },
+        {
+            "organisation":"Test Centre 8",
+            "type":"Carers of people with a mental illness",
+            "event":"Luscious Lunch",
+            "date":"Monday, 17 October 2016",
+            "location":"Wollongong",
+            "district":"Illawara"
+        },
+        {
+            "organisation":"Test Centre 9",
+            "type":"Carers of frail-aged people",
+            "event":"Polish Carers Get Together",
+            "date":"Monday, 17 October 2016",
+            "location":"Ashfield",
+            "district":"Inner West sydney"
+        },
+        {
+            "organisation":"Test Centre 10",
+            "type":"All carers",
+            "event":"Carers Day Out 2016",
+            "date":"Tuesday, 18 October 2016",
+            "location":"Harbour",
+            "district":"Mid North Coast"
+        },
+        {
+            "organisation":"Test Centre 11",
+            "type":"Carers of people living with dementia",
+            "event":"National Carers Week Morning Tea",
+            "date":"Tuesday, 18 October 2016",
+            "location":"Harbour",
+            "district":"Mid North Coast"
+        },
+        {
+            "organisation":"Test Centre 12",
+            "type":"Carers of people living with dementia",
+            "event":"Carers Luncheon",
+            "date":"Wednesday, 19 October 2016",
+            "location":"Haven",
+            "district":"Mid North Coast"
+        },
+        {
+            "organisation":"Test Centre 13",
+            "type":"Carers of people living with dementia",
+            "event":"Carers Support Group Morning Tea",
+            "date":"Monday, 24 October 2016",
+            "location":"Richmond",
+            "district":"Nepean"
+        },
+        {
+            "organisation":"Test Centre 14",
+            "type":"All carers",
+            "event":"Pamper Session & Morning Tea",
+            "date":"Friday, 4 November 2016",
+            "location":"Katoomba",
+            "district":"Nepean"
+        },
+        {
+            "organisation":"Test Centre 15",
+            "type":"Carers of people with a mental illness",
+            "event":"Growing in our Group",
+            "date":"Tuesday, 25 October 2016",
+            "location":"Tenterfield",
+            "district":"New England"
+        },
+        {
+            "organisation":"Test Centre 16",
+            "type":"All carers",
+            "event":"Carers Come Together",
+            "date":"Wednesday, 26 October 2016",
+            "location":"Barraba",
+            "district":"New England"
+        },
+        {
+            "organisation":"Test Centre 17",
+            "type":"Carers of frail-aged people",
+            "event":"Happy Photography Day",
+            "date":"Wednesday, 12 October 2016",
+            "location":"Eastwood",
+            "district":"Northern Sydney"
+        },
+        {
+            "organisation":"Test Centre 18",
+            "type":"Carers of younger people with a disability",
+            "event":"Dining & Relaxation Evening",
+            "date":"Wednesday, 12 October 2016",
+            "location":"Epping",
+            "district":"Northern Sydney"
+        },
+        {
+            "organisation":"Test Centre 19",
+            "type":"Carers of younger people with a disability",
+            "event":"Keeping the Connection Going",
+            "date":"Saturday, 1 October 2016",
+            "location":"Albury",
+            "district":"Riverina/Murray"
+        },
+        {
+            "organisation":"Test Centre 20",
+            "type":"Carers of frail-aged people",
+            "event":"Griffith Festival of Gardens",
+            "date":"Friday, 14 October 2016",
+            "location":"Griffith",
+            "district":"Riverina/Murray"
+        },
+        {
+            "organisation":"Test Centre 21",
+            "type":"All carers",
+            "event":"Educational Lunch ",
+            "date":"Monday, 21 November 2016",
+            "location":"Miranda",
+            "district":"South East Sydney"
+        },
+        {
+            "organisation":"Test Centre 22",
+            "type":"Carers of younger people (under 65 years of age) with a disability",
+            "event":"Lunch & Art Based Mindfulness Exercise",
+            "date":"Wednesday, 19 October 2016",
+            "location":"Moss Vale",
+            "district":"Southern Highlands"
+        },
+        {
+            "organisation":"Test Centre 23",
+            "type":"Carers of younger people (under 65 years of age) with a disability",
+            "event":"Carers High Tea",
+            "date":"Thursday, 20 October 2016",
+            "location":"Moss Vale",
+            "district":"Southern Highlands"
+        },
+        {
+            "organisation":"Test Centre 24",
+            "type":"Carers of younger people with a disability",
+            "event":"Carers Cuppa",
+            "date":"Saturday, 22 October 2016",
+            "location":"Hill Top",
+            "district":"Southern Highlands"
+        },
+        {
+            "organisation":"Test Centre 25",
+            "type":"Carers of people living with dementia",
+            "event":"Morning Tea",
+            "date":"Tuesday, 25 October 2016",
+            "location":"Merimbula",
+            "district":"Southern Highlands"
+        }
+    ]
 </script>
+
+<script defer src="app.js"></script>
 </body>
 </html>

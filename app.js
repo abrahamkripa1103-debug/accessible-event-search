@@ -7,6 +7,26 @@
   // ===== Data (via JSON file) =====
   let DATA = [];
   async function init(){
+
+  // Try embedded JSON first (works when opened from file:// without a server)
+  function loadEmbedded(){
+    try{
+      const el = document.getElementById('eventsData');
+      if(!el) return null;
+      const raw = el.textContent || el.innerText || '';
+      if(!raw.trim()) return null;
+      return JSON.parse(raw);
+    }catch(e){ return null; }
+  }
+
+    const embedded = loadEmbedded();
+    if (embedded && Array.isArray(embedded) && embedded.length){
+      DATA = embedded;
+      countEl.textContent = 'No results yet. Enter filters and press Search.';
+      statusEl.textContent = 'Embedded data loaded. Press Search to see results.';
+      return;
+    }
+
     try{
       const res = await fetch('work-task-test.json', { cache: 'no-store' });
       if(!res.ok) throw new Error('HTTP '+res.status);
@@ -197,6 +217,68 @@
   }
   function toggleEnlarge(on){ setPressed(swEnlarge,on); if(on) document.documentElement.setAttribute('data-mode','enlarge'); else if(document.documentElement.getAttribute('data-mode')==='enlarge') document.documentElement.removeAttribute('data-mode'); announce(on?'Enlarge text on.':'Enlarge text off.'); }
   function toggleForm(on){ formRead=on; setPressed(swForm,on); if(on){ form.addEventListener('focusin', onFormFocus, true); form.addEventListener('input', onFormInput, true); announce('Form reading on.'); } else { form.removeEventListener('focusin', onFormFocus, true); form.removeEventListener('input', onFormInput, true); announce('Form reading off.'); } }
+
+  // ===== Keyboard Mode Shortcuts =====
+  // Shift + Ctrl + Alt + (K/L/P/X/1)
+  function usingTextInputTarget(e){
+    const t=e.target, tag=(t&&t.tagName||'').toLowerCase();
+    return tag==='input'||tag==='textarea'||t.isContentEditable;
+  }
+  function chord(e, key){
+    return kb && e.shiftKey && e.ctrlKey && e.altKey && e.key.toLowerCase()===key;
+  }
+  document.addEventListener('keydown', async (e)=>{
+    if(!kb) return;
+    if(usingTextInputTarget(e)) return;
+
+    // K: Put focus on Listen button
+    if(chord(e,'k')){
+      e.preventDefault();
+      const btn = document.getElementById('listenMainBtn');
+      if(btn){ btn.focus(); announce('Focus on Listen button.'); }
+      return;
+    }
+
+    // L: Put focus on player and start the reading
+    if(chord(e,'l')){
+      e.preventDefault();
+      await loadVoices();
+      speak(readSummary());
+      const playBtn = document.getElementById('ttsPlay');
+      if(playBtn){ playBtn.focus(); }
+      return;
+    }
+
+    // P: Put focus on pause button and pause or resume the reading
+    if(chord(e,'p')){
+      e.preventDefault();
+      const playBtn = document.getElementById('ttsPlay');
+      if(playBtn){ playBtn.focus(); }
+      // playPause() toggles between play/pause/resume
+      try{ playPause(); }catch{}
+      return;
+    }
+
+    // X: Put focus on stop button and stop the reading
+    if(chord(e,'x')){
+      e.preventDefault();
+      const stopBtn = document.getElementById('ttsStop');
+      if(stopBtn){ stopBtn.focus(); }
+      try{ cancel(); }catch{}
+      announce('Stopped.');
+      return;
+    }
+
+    // 1: Open/close menu
+    if(chord(e,'1')){
+      e.preventDefault();
+      const isOpen = listenMenu.getAttribute('aria-hidden')==='false';
+      if(isOpen){ closeMenu(); }
+      else { openMenu(); document.getElementById('listenMenuBtn').focus(); }
+      return;
+    }
+  });
+
 
   swKb.addEventListener('click', ()=> toggleKb(swKb.getAttribute('aria-checked')!=='true'));
   swKb.addEventListener('keydown', (e)=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleKb(swKb.getAttribute('aria-checked')!=='true'); } });
