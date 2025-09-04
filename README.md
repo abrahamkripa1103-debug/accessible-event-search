@@ -1,18 +1,26 @@
-# Accessible Events Search (WCAG AA)
 
-This is a single-file HTML app that loads events from `work-task-test.json` and lets users search by **event name** and **event date**. It’s designed to meet WCAG 2.2 AA intent with semantic HTML, labels, visible focus, keyboard-only operation, a skip link, ARIA live regions, and a high-contrast toggle.
+# Accessible Events Search
 
-## Quick start
+This app now **loads event data from `work-task-test.json`**.
 
-1. Put `index.html` and `work-task-test.json` in the same folder.
-2. Start a tiny local server (prevents browsers from blocking `fetch` on local files):
-   - **Python**: `python -m http.server` → open http://localhost:8000
-   - **Node**: `npx serve`
-3. Open `index.html` in your browser via the server and try searching.
+## How to Run (Using Node.js)
+
+1. Put all files (`index.html`, `work-task-test.json`, etc.) in the same folder.
+2. Open a terminal in that folder.
+3. Run this command to start a simple local server:
+   ```bash
+   npx http-server
+   ```
+   *(If you don't have `http-server`, install it with: `npm install -g http-server`)*
+4. The terminal will show a link like:
+   ```
+   http://localhost:3000
+   ```
+   Open that link in your web browser.
+5. You can now search by **event name** or **event date**.
 
 ## Notes
-
-- Dates in the dataset like `Friday, 10 October 2016` are parsed to ISO (`2016-10-10`) for reliable date filtering.
-- Name filter is case-insensitive and supports partial matches.
-- Results are sorted chronologically.
-- The **Toggle high contrast** button helps meet contrast requirements.
+- Dates like `Friday, 10 October 2016` are converted to `2016-10-10` for easy filtering.
+- Search is **case-insensitive** and matches part of the name.
+- Results are shown in order by date.
+- Accessibility features included: Keyboard Mode, Click & Listen, Enlarge Text, Form Reading, Text Mode, Page Mask, and Help.
