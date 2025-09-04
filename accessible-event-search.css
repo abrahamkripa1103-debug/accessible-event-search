@@ -129,3 +129,18 @@ input[type="date"] {
     var(--mask-shade) var(--mask-bottom-start) 100%
   );
 }
+
+/* Ensure Help item is visible */
+.listen-menu{max-height:none;overflow:visible;}
+
+#helpModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:10003}
+#helpModal[aria-hidden="false"]{display:flex}
+
+
+/* === FIX: keep switches inside menu & remove horizontal overflow === */
+.listen-menu{min-width:320px; overflow-x:hidden;}
+.menu-item{display:flex; align-items:center; gap:.6rem; padding-right:.9rem;}
+.menu-item .menu-label{flex:1; min-width:0;}
+.menu-item [role="switch"]{margin-left:auto; flex:0 0 auto;}
+/* Avoid outlines pushing content outside the menu */
+.menu-item:hover,.menu-item:focus-visible{outline-offset:0;}

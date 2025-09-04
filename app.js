@@ -348,5 +348,39 @@
   function onFormFocus(e){ if(!formRead) return; const t=e.target; if(!t||!('value' in t)) return; const msg=[labelFor(t), getDescribedText(t) ? ('Hint: '+getDescribedText(t)) : ''].filter(Boolean).join('. '); speak(msg); }
   let inputDebounce; function onFormInput(e){ if(!formRead) return; clearTimeout(inputDebounce); const t=e.target; inputDebounce=setTimeout(()=>{ speak(labelFor(t)+' updated.'); }, 700); }
 
+  // ===== Help Modal =====
+  const helpModal = document.getElementById('helpModal');
+  const helpClose = document.getElementById('helpClose');
+  const helpContent = document.getElementById('helpModalContent');
+  const miHelp = document.getElementById('miHelp');
+  let lastHelpFocus = null;
+
+  function openHelp(){
+    lastHelpFocus = document.activeElement;
+    helpModal.setAttribute('aria-hidden','false');
+    document.body.style.overflow='hidden';
+    (helpContent||helpModal).focus();
+    announce('Help opened.');
+  }
+  function closeHelp(){
+    helpModal.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+    (lastHelpFocus || document.getElementById('listenMenuBtn'))?.focus();
+    announce('Help closed.');
+  }
+  if(helpClose){ helpClose.addEventListener('click', closeHelp); }
+  if(miHelp){ miHelp.addEventListener('click', ()=>{ closeMenu(); openHelp(); }); }
+  helpModal?.addEventListener('keydown', (e)=>{
+    if(helpModal.getAttribute('aria-hidden')==='true') return;
+    if(e.key==='Escape'){ e.preventDefault(); closeHelp(); return; }
+    if(e.key==='Tab'){
+      const f=helpModal.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
+      const list=Array.from(f).filter(n=>!n.hasAttribute('disabled') && n.offsetParent!==null);
+      if(!list.length) return; const first=list[0], last=list[list.length-1];
+      if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
+      else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
+    }
+  });
+
   init();
 })();

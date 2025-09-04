@@ -39,6 +39,9 @@
                         <span class="menu-label">Page Mask</span>
                         <span class="menu-small">(↑/↓ move, +/- size)</span>
                     </button>
+                    <button id="miHelp" class="menu-item" role="menuitem">
+                        <span class="menu-label">Help</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -108,6 +111,33 @@
         </div>
         <div id="textModalContent" class="text-content" tabindex="0" aria-describedby="textHelp"></div>
         <p id="textHelp" class="sr-only">Text mode shows a simplified reading view. Press Escape to close.</p>
+    </div>
+</div>
+
+<div id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle" aria-hidden="true">
+    <div class="text-dialog">
+        <div class="text-toolbar">
+            <h2 id="helpTitle">Help</h2>
+            <div class="grow"></div>
+            <button id="helpClose" class="tts-btn" aria-label="Close help">✕</button>
+        </div>
+        <div id="helpModalContent" class="text-content" tabindex="0">
+            <h3>How to use this page</h3>
+            <p>Use the form to filter events by <strong>event name</strong> and <strong>event date</strong>. Press <strong>Search</strong> to view results.</p>
+            <h3>Keyboard shortcuts</h3>
+            <ul>
+                <li><strong>Shift + Ctrl + Alt + K</strong> – Focus the Listen button</li>
+                <li><strong>Shift + Ctrl + Alt + L</strong> – Focus the player and start reading</li>
+                <li><strong>Shift + Ctrl + Alt + P</strong> – Pause / resume reading</li>
+                <li><strong>Shift + Ctrl + Alt + X</strong> – Stop reading</li>
+            </ul>
+            <h3>Tips</h3>
+            <ul>
+                <li>Use <em>Text Mode</em> for a simplified reading view.</li>
+                <li>Turn on <em>Click and Listen</em> to hear any text you click.</li>
+                <li>Use <em>Page Mask</em> to focus on part of the page (↑/↓ move, +/- resize).</li>
+            </ul>
+        </div>
     </div>
 </div>
 
